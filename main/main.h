@@ -1,6 +1,7 @@
 #ifndef MAIN_H_
 #define MAIN_H_
 
+//#define DEBUG  1
 #ifdef DEBUG
 #define DEBUG_PRINT(x) Serial.print(x); Serial.flush()
 #define DEBUG_PRINTDEC(x) Serial.print(x, DEC);Serial.flush()

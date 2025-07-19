@@ -17,6 +17,8 @@ uint32_t check_wifi_timer = 0;
 
 extern bool wifi_scan_start;
 
+extern bool flashUpdateRequest;
+
 
 
 void setup(){
@@ -44,4 +46,12 @@ void loop(){
       wifi_scan_start = false;
       xTaskCreate(scan_task, "scan_task", 5000, NULL, 1, NULL);
     }
+
+    if(flashUpdateRequest)
+    {
+      flashUpdateRequest = false;
+      saveSystemVariables();
+    }
+    
+    saveSystemVariables();
 }

@@ -18,10 +18,13 @@ const char auth_username[15] = "admin";
 const char master_key[15] = "12345678";
 char auth_password[15] = "";
 bool flashUpdateRequest = false;
+extern uint8_t station_mode, go_station ;
 
 bool wifi_scan_start;
 extern enum wifi_scan_states wifi_scan_status;
 extern int scan_task_return;
+
+extern wifi_settings_t device_wifi_settings;
 
 /* const httpd related values stored in ROM */
 const static char http_200_hdr[] = "200 OK";
@@ -304,55 +307,79 @@ esp_err_t http_server_get_handler(httpd_req_t *req)
         httpd_resp_set_type(req,http_content_type_txt);
         httpd_resp_send(req, "ok", HTTPD_RESP_USE_STRLEN);
     }
-    // else if(strstr(req->uri, "/settings"))
-    // {
+    else if(strstr(req->uri, "/settings"))
+    {
 
-    //     // if(basic_auth_get_handler(req,auth_password)!= ESP_OK)
-    //     // {
-    //     //     return ESP_FAIL;
-    //     // }
+        // if(basic_auth_get_handler(req,auth_password)!= ESP_OK)
+        // {
+        //     return ESP_FAIL;
+        // }
        
-    //     bool error = false;
-    //     char*  buf;
-    //     size_t buf_len;
-    //     buf_len = httpd_req_get_url_query_len(req) + 1;
-    //     if (buf_len > 1) {
-    //         char word_temp[6];
-    //         buf = (char*)malloc(buf_len);
-    //         if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
-    //             urldecode(buf);
-    //             //ESP_LOGI(TAG, "Found URL query => %s", buf);
-    //             /* Get value of expected key from query string */
-    //             if (httpd_query_key_value(buf, "TIME_TO_SLEEP", word_temp, sizeof(word_temp)) == ESP_OK) {
-    //                 if( atoi(word_temp) <= 120 && atoi(word_temp) > 0 ){
-    //                 TIME_TO_SLEEP = atoi(word_temp) * 60;
-    //                 error = false;
-    //                 flashUpdateRequest = true;
-    //                 }
-    //                 else
-    //                     error = true;
-    //                  memset(word_temp, 0, sizeof(word_temp));
-    //             }
+        bool error = false;
+        char*  buf;
+        size_t buf_len;
+        buf_len = httpd_req_get_url_query_len(req) + 1;
+        if (buf_len > 1) {
+            char temp_param[100];
+            char byte_temp[2];
+            buf = (char*)malloc(buf_len);
+            if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
+                urldecode(buf);
+                //ESP_LOGI(TAG, "Found URL query => %s", buf);
+                /* Get value of expected key from query string */
+                if (httpd_query_key_value(buf, "wifi_ssid", temp_param, sizeof(temp_param)) == ESP_OK) {
+                    if (strlen(temp_param) <= 31) {
+                        memset(device_wifi_settings.ssid, 0, sizeof(device_wifi_settings.ssid));
+                        
+                        strcpy((char *)device_wifi_settings.ssid, temp_param);
+                        flashUpdateRequest = true;
+                        
+                        } else
+                            error = true;
+                        memset(temp_param, 0, sizeof(temp_param));
+                }
+                if (httpd_query_key_value(buf, "wifi_password", temp_param, sizeof(temp_param)) == ESP_OK) {
+                    if (strlen(temp_param) <= 62) {
+                        memset(device_wifi_settings.password, 0, sizeof(device_wifi_settings.password));
+                        
+                        strcpy((char *)device_wifi_settings.password, temp_param);
+                        flashUpdateRequest = true;
+                        
+                        } else
+                            error = true;
+                        memset(temp_param, 0, sizeof(temp_param));
+                }
+                if (httpd_query_key_value(buf, "wifi_station_flag", byte_temp, sizeof(byte_temp)) == ESP_OK) {
+                    uint8_t flag = atoi(byte_temp);
+                    if ((flag == 0 && byte_temp[0] == '0') || flag == 1) {
+                        go_station = flag;
+                        flashUpdateRequest = true;
+                    } else {
+                        error = true;
+                    }
+                    memset(byte_temp, 0, sizeof(byte_temp));
+                }
                 
-    //         }
-    //         free(buf);
+                
+            }
+            free(buf);
 
-    //     }
-    //     httpd_resp_set_hdr(req, "Access-Control-Allow-Credentials", "true");
-    //     httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Authorization");
-    //     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
-    //     if (!error)
-    //     {
-    //         httpd_resp_set_status(req, http_200_hdr);
-    //         httpd_resp_set_type(req,http_content_type_txt);
-    //         httpd_resp_send(req, "Log in OK!", HTTPD_RESP_USE_STRLEN);
-    //     }
-    //     else{
-    //         httpd_resp_set_status(req, http_400_hdr);
-    //         httpd_resp_set_type(req,http_content_type_txt);
-    //         httpd_resp_send(req, "error", HTTPD_RESP_USE_STRLEN);
-    //     }
-    // }
+        }
+        httpd_resp_set_hdr(req, "Access-Control-Allow-Credentials", "true");
+        httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Authorization");
+        httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+        if (!error)
+        {
+            httpd_resp_set_status(req, http_200_hdr);
+            httpd_resp_set_type(req,http_content_type_txt);
+            httpd_resp_send(req, "Log in OK!", HTTPD_RESP_USE_STRLEN);
+        }
+        else{
+            httpd_resp_set_status(req, http_400_hdr);
+            httpd_resp_set_type(req,http_content_type_txt);
+            httpd_resp_send(req, "error", HTTPD_RESP_USE_STRLEN);
+        }
+    }
 
     // else if (strcmp(req->uri, "/get_settings") == 0)
     // {
@@ -418,6 +445,23 @@ esp_err_t http_server_get_handler(httpd_req_t *req)
     //     httpd_resp_set_type(req,http_content_type_txt);
     //     httpd_resp_send(req,text_string, HTTPD_RESP_USE_STRLEN);
     // }
+
+    else if (strcmp(req->uri, "/wifi_settings.json") == 0)
+    {
+        //char text_string[155];
+        memset(text_string, 0, sizeof(text_string));
+        snprintf(text_string, sizeof(text_string),
+           "{\"wifi_ssid\":\"%s\",\"wifi_password\":\"%s\",\"wifi_station_"
+           "flag\":%d}",
+           device_wifi_settings.ssid, device_wifi_settings.password,
+           go_station);
+        httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");  
+        httpd_resp_set_hdr(req, "Access-Control-Allow-Credentials", "true");
+        httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Authorization");    
+        httpd_resp_set_status(req, http_200_hdr);
+        httpd_resp_set_type(req,http_content_type_txt);
+        httpd_resp_send(req, text_string, HTTPD_RESP_USE_STRLEN);
+    }
 
     else if (strcmp(req->uri, "/scanNetwork") == 0)
     {

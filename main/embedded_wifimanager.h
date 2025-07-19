@@ -22,7 +22,7 @@ typedef struct wifi_station_reconnect_flag {
 } wifi_station_reconnect_flag_t;
 
 enum wifi_scan_states { INIT = 'I', STARTED = 'S', FINISHED = 'F' };
-extern wifi_settings_t device_wifi_settings;
+
 
 
 void wm_init();

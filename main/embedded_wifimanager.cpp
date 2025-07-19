@@ -26,6 +26,12 @@ extern bool connected;
 enum wifi_scan_states wifi_scan_status = INIT;
 int scan_task_return;
 
+bool dhcp = false;
+char ipAddress[16] = "192.168.1.155";
+char netMaskAddress[16] = "255.255.255.0";
+char gateWayAddress[16] = "192.168.1.1";
+char DNSAddress[16] = "8.8.8.8";
+
 #define INITIAL_AP_TIME 60000
 
 
@@ -77,6 +83,15 @@ static int station_connect_wifi(const char *ssid, const char *pass) {
   int connRes;
   DEBUG_PRINTLN(F("Connecting as wifi client..."));
   IPAddress ip, gw, nm, dns;
+  if (!dhcp) {
+    DEBUG_PRINTLN(F("Custom STA IP/GW/Subnet"));
+    ip.fromString(ipAddress);
+    gw.fromString(gateWayAddress);
+    nm.fromString(netMaskAddress);
+    dns.fromString(DNSAddress);
+    WiFi.config(ip, gw, nm, dns);
+    DEBUG_PRINTLN(WiFi.localIP());
+  }
   // check if we have ssid and pass and force those, if not, try with last saved
   // values
   // if (ssid != "") {
