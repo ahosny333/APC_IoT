@@ -1,2 +1,9 @@
-idf_component_register(SRCS "hello_world_main.cpp"
-                    INCLUDE_DIRS "")
+set(srcs
+  main_project.cpp
+  embedded_wifimanager.cpp
+  credentials.cpp
+  )
+
+
+idf_component_register(SRCS ${srcs} 
+                    INCLUDE_DIRS ".")
