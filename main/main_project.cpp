@@ -2,6 +2,7 @@
 #include "credentials.h"
 #include "embedded_wifimanager.h"
 #include "main.h"
+#include "app_webserver_idf.h"
 #include <Arduino.h>
 #include <WiFi.h>
 #include <esp_pm.h>
@@ -23,6 +24,7 @@ void setup(){
   }
   readSystemVariables();
   wm_init();
+  webserver_task();
 }
 
 void loop(){
