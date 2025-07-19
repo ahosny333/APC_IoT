@@ -19,6 +19,10 @@ const char master_key[15] = "12345678";
 char auth_password[15] = "";
 bool flashUpdateRequest = false;
 
+bool wifi_scan_start;
+extern enum wifi_scan_states wifi_scan_status;
+extern int scan_task_return;
+
 /* const httpd related values stored in ROM */
 const static char http_200_hdr[] = "200 OK";
 // const static char http_302_hdr[] = "302 Found";
@@ -414,6 +418,64 @@ esp_err_t http_server_get_handler(httpd_req_t *req)
     //     httpd_resp_set_type(req,http_content_type_txt);
     //     httpd_resp_send(req,text_string, HTTPD_RESP_USE_STRLEN);
     // }
+
+    else if (strcmp(req->uri, "/scanNetwork") == 0)
+    {
+        memset(text_string, 0, sizeof(text_string));
+        switch (wifi_scan_status) 
+        {
+            case INIT:
+                wifi_scan_status = STARTED;
+                wifi_scan_start = true;
+                sprintf(text_string, "{\"networks\":[],\"status\":0}");
+                break;
+            case STARTED:
+                sprintf(text_string, "{\"networks\":[],\"status\":0}");
+                break;
+            case FINISHED:
+                if(scan_task_return < 0)
+                {
+                    sprintf(text_string, "{\"networks\":[],\"status\":-1}");
+                }
+                else if(scan_task_return == 0)
+                {
+                    sprintf(text_string, "{\"networks\":[],\"status\":1}");
+                }
+                else
+                {
+                    if(scan_task_return > 1)
+                    {
+                        char *ptr_res = text_string;
+                        sprintf(ptr_res, "{\"networks\":[");
+                        ptr_res += strlen(ptr_res);
+
+                        for (int i = 0; i < scan_task_return-1; ++i) {
+                            sprintf(ptr_res, "[\"%s\",%d,%d],",WiFi.SSID(i).c_str(),WiFi.RSSI(i),(WiFi.encryptionType(i) == WIFI_AUTH_OPEN)?0:1); 
+                            ptr_res += strlen(ptr_res);              
+                        }
+
+                        sprintf(ptr_res,"[\"%s\",%d,%d]],\"status\":1}",WiFi.SSID(scan_task_return-1).c_str(),WiFi.RSSI(scan_task_return-1),(WiFi.encryptionType(scan_task_return-1) == WIFI_AUTH_OPEN)?0:1);
+                    }
+                    else
+                    {
+                        sprintf(text_string, "{\"networks\":[[\"%s\",%d,%d]],\"status\":1}",WiFi.SSID(0).c_str(),WiFi.RSSI(0),(WiFi.encryptionType(0) == WIFI_AUTH_OPEN)?0:1);
+                    }
+                    
+                }
+                WiFi.scanDelete();
+                wifi_scan_status = INIT;
+                break;
+
+        }
+        httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");  
+        httpd_resp_set_status(req, http_200_hdr);
+        httpd_resp_set_type(req,http_content_type_txt);
+        httpd_resp_send(req, text_string, HTTPD_RESP_USE_STRLEN);
+    }
+
+
+
+
     else if (strcmp(req->uri, "/ota.html") == 0)
     {      
         httpd_resp_set_status(req, http_200_hdr);

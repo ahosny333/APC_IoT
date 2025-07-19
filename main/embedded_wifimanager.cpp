@@ -23,6 +23,9 @@ static uint32_t initial_ap_timer = 0;
 wifi_settings_t device_wifi_settings = {"", ""};
 extern bool connected;
 
+enum wifi_scan_states wifi_scan_status = INIT;
+int scan_task_return;
+
 #define INITIAL_AP_TIME 60000
 
 
@@ -208,4 +211,21 @@ void wm_loop() {
   } else {
     ap_loop();
   } 
+}
+
+
+void scan_task(void* parameter)
+{
+  delay(1000);
+  DEBUG_PRINTLN(F("Scan start"));
+  // WiFi.scanNetworks will return the number of networks found.
+  scan_task_return = WiFi.scanNetworks();
+  DEBUG_PRINTLN(F("Scan done"));
+  wifi_scan_status = FINISHED;
+  // Delete the scan result to free memory for code below.
+  //WiFi.scanDelete();
+
+  delay(10);
+
+  vTaskDelete(NULL);
 }

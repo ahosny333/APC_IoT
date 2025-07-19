@@ -15,6 +15,10 @@ extern char app_id[10];
 bool connected = false;
 uint32_t check_wifi_timer = 0;
 
+extern bool wifi_scan_start;
+
+
+
 void setup(){
   Serial.begin(115200);
   memset(user_token, 0, sizeof(user_token));
@@ -33,5 +37,11 @@ void loop(){
     if (millis() - check_wifi_timer > check_wifi_period) {
       check_wifi_timer = millis();
       wm_loop();
+    }
+
+    if(wifi_scan_start)
+    {
+      wifi_scan_start = false;
+      xTaskCreate(scan_task, "scan_task", 5000, NULL, 1, NULL);
     }
 }

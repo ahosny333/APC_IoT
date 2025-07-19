@@ -28,5 +28,6 @@ extern wifi_settings_t device_wifi_settings;
 void wm_init();
 void wm_loop();
 void wm_activity_callback();
+void scan_task(void* parameter);
 
 #endif
