@@ -3,8 +3,9 @@ set(srcs
   embedded_wifimanager.cpp
   credentials.cpp
   app_webserver_idf.cpp
+  MQTT.cpp
   )
 
 idf_component_register(SRCS ${srcs} 
                     INCLUDE_DIRS "."
-                    EMBED_FILES "web/ota.html" "web/index.html")
+                    EMBED_FILES "web/ota.html" "web/index.html" "web/wifimanager.html")

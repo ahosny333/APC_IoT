@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Wi-Fi Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.ap-mode {
+            background-color: #ff6b6b;
+        }
+
+        .status-indicator.station-mode {
+            background-color: #51cf66;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .section h2 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .scan-section {
+            text-align: center;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .networks-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .network-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            margin: 8px 0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+
+        .network-item:hover {
+            background: #e3f2fd;
+            transform: translateX(5px);
+        }
+
+        .network-item.selected {
+            border-color: #667eea;
+            background: #e8f0fe;
+        }
+
+        .network-info {
+            display: flex;
+            align-items: center;
+        }
+
+        .wifi-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        .network-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .signal-strength {
+            display: flex;
+            align-items: center;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .signal-bars {
+            margin-left: 5px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+
+        .alert.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .current-settings {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+
+        .password-toggle {
+            position: relative;
+        }
+
+        .password-toggle button {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #666;
+            font-size: 18px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ESP32 Wi-Fi Manager</h1>
+            <p><span class="status-indicator ap-mode" id="statusIndicator"></span>
+            <span id="statusText">Access Point Mode - 192.168.4.1</span></p>
+        </div>
+
+        <!-- Current Settings Display -->
+        <div class="section current-settings hidden" id="currentSettingsSection">
+            <h2>📋 Current Settings</h2>
+            <div id="currentSettings">
+                <p><strong>SSID:</strong> <span id="currentSSID">-</span></p>
+                <p><strong>Mode:</strong> <span id="currentMode">-</span></p>
+            </div>
+        </div>
+
+        <!-- Network Scanning Section -->
+        <div class="section">
+            <h2>📡 Available Networks</h2>
+            <div class="scan-section">
+                <button class="btn" id="scanBtn" onclick="startNetworkScan()">
+                    <span id="scanBtnText">Scan Networks</span>
+                </button>
+                <div id="networksContainer" class="networks-list"></div>
+            </div>
+        </div>
+
+        <!-- Wi-Fi Configuration Section -->
+        <div class="section">
+            <h2>⚙️ Wi-Fi Configuration</h2>
+            <form id="wifiForm">
+                <div class="form-group">
+                    <label for="ssid">Network Name (SSID)</label>
+                    <input type="text" id="ssid" name="ssid" placeholder="Enter network name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="password-toggle">
+                        <input type="password" id="password" name="password" placeholder="Enter network password">
+                        <button type="button" onclick="togglePassword()">👁️</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="mode">Connection Mode</label>
+                    <select id="mode" name="mode">
+                        <option value="1">Station Mode (Connect to Wi-Fi)</option>
+                        <option value="0">Access Point Mode (Create Hotspot)</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn" id="saveBtn">
+                    <span id="saveBtnText">Save Configuration</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="alertContainer"></div>
+    </div>
+
+    <script>
+        let scanInterval = null;
+        let selectedNetwork = null;
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCurrentSettings();
+        });
+
+        // Load current Wi-Fi settings
+        async function loadCurrentSettings() {
+            try {
+                const response = await fetch('/wifi_settings.json');
+                if (response.ok) {
+                    const settings = await response.json();
+                    document.getElementById('currentSSID').textContent = settings.wifi_ssid || 'Not configured';
+                    document.getElementById('currentMode').textContent = settings.wifi_station_flag === 1 ? 'Station Mode' : 'Access Point Mode';
+                    
+                    // Update status indicator
+                    const indicator = document.getElementById('statusIndicator');
+                    const statusText = document.getElementById('statusText');
+                    
+                    if (settings.wifi_station_flag === 1) {
+                        indicator.className = 'status-indicator station-mode';
+                        statusText.textContent = 'Station Mode - 192.168.1.155';
+                    } else {
+                        indicator.className = 'status-indicator ap-mode';
+                        statusText.textContent = 'Access Point Mode - 192.168.4.1';
+                    }
+                    
+                    document.getElementById('currentSettingsSection').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Failed to load current settings:', error);
+            }
+        }
+
+        // Start network scanning
+        async function startNetworkScan() {
+            const scanBtn = document.getElementById('scanBtn');
+            const scanBtnText = document.getElementById('scanBtnText');
+            const networksContainer = document.getElementById('networksContainer');
+            
+            // Disable button and show loading state
+            scanBtn.disabled = true;
+            scanBtnText.innerHTML = '<span class="loading"></span>Scanning...';
+            networksContainer.innerHTML = '';
+            
+            try {
+                // First call to initiate scan
+                await fetch('/scanNetwork');
+                
+                // Poll for results
+                scanInterval = setInterval(async () => {
+                    try {
+                        const response = await fetch('/scanNetwork');
+                        const data = await response.json();
+                        
+                        if (data.status === 1) {
+                            // Scan completed
+                            clearInterval(scanInterval);
+                            displayNetworks(data.networks);
+                            resetScanButton();
+                        } else if (data.status === -1) {
+                            // Scan error
+                            clearInterval(scanInterval);
+                            showAlert('Failed to scan networks. Please try again.', 'error');
+                            resetScanButton();
+                        }
+                        // If status is 0, continue polling
+                    } catch (error) {
+                        clearInterval(scanInterval);
+                        showAlert('Network scan failed: ' + error.message, 'error');
+                        resetScanButton();
+                    }
+                }, 2000);
+                
+            } catch (error) {
+                showAlert('Failed to start network scan: ' + error.message, 'error');
+                resetScanButton();
+            }
+        }
+
+        // Reset scan button to normal state
+        function resetScanButton() {
+            const scanBtn = document.getElementById('scanBtn');
+            const scanBtnText = document.getElementById('scanBtnText');
+            
+            scanBtn.disabled = false;
+            scanBtnText.textContent = 'Scan Networks';
+        }
+
+        // Display scanned networks
+        function displayNetworks(networks) {
+            const container = document.getElementById('networksContainer');
+            
+            if (networks.length === 0) {
+                container.innerHTML = '<div class="alert info">No networks found. Try scanning again.</div>';
+                return;
+            }
+            
+            container.innerHTML = networks.map((network, index) => {
+                const [ssid, rssi, encryption] = network;
+                const signalStrength = getSignalStrength(rssi);
+                const lockIcon = encryption === 1 ? '🔒' : '🔓';
+                
+                return `
+                    <div class="network-item" onclick="selectNetwork('${ssid}', ${encryption})" data-ssid="${ssid}">
+                        <div class="network-info">
+                            <span class="wifi-icon">${lockIcon}</span>
+                            <span class="network-name">${ssid}</span>
+                        </div>
+                        <div class="signal-strength">
+                            ${rssi} dBm
+                            <span class="signal-bars">${signalStrength}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Get signal strength visualization
+        function getSignalStrength(rssi) {
+            if (rssi >= -50) return '📶';
+            if (rssi >= -60) return '📶';
+            if (rssi >= -70) return '📶';
+            if (rssi >= -80) return '📶';
+            return '📶';
+        }
+
+        // Select a network from the list
+        function selectNetwork(ssid, encryption) {
+            // Remove previous selection
+            document.querySelectorAll('.network-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Select current network
+            const networkItem = document.querySelector(`[data-ssid="${ssid}"]`);
+            if (networkItem) {
+                networkItem.classList.add('selected');
+            }
+            
+            // Fill the form
+            document.getElementById('ssid').value = ssid;
+            selectedNetwork = { ssid, encryption };
+            
+            showAlert(`Selected network: ${ssid}`, 'info');
+        }
+
+        // Toggle password visibility
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggleBtn = passwordInput.nextElementSibling;
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleBtn.textContent = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                toggleBtn.textContent = '👁️';
+            }
+        }
+
+        // Handle form submission
+        document.getElementById('wifiForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const ssid = document.getElementById('ssid').value.trim();
+            const password = document.getElementById('password').value;
+            const mode = document.getElementById('mode').value;
+            
+            if (!ssid) {
+                showAlert('Please enter a network name (SSID)', 'error');
+                return;
+            }
+            
+            const saveBtn = document.getElementById('saveBtn');
+            const saveBtnText = document.getElementById('saveBtnText');
+            
+            // Show loading state
+            saveBtn.disabled = true;
+            saveBtnText.innerHTML = '<span class="loading"></span>Saving...';
+            
+            try {
+                const params = new URLSearchParams({
+                    wifi_ssid: ssid,
+                    wifi_password: password,
+                    wifi_station_flag: mode
+                });
+                
+                const response = await fetch(`/settings?${params.toString()}`);
+                
+                if (response.ok) {
+                    const result = await response.text();
+                    if (result.trim() === 'ok') {
+                        showAlert('Wi-Fi settings saved successfully! The device will restart in a moment.', 'success');
+                        setTimeout(() => {
+                            loadCurrentSettings();
+                        }, 2000);
+                    } else {
+                        showAlert('Failed to save settings. Please try again.', 'error');
+                    }
+                } else {
+                    showAlert('Failed to save settings. Server returned an error.', 'error');
+                }
+            } catch (error) {
+                showAlert('Failed to save settings: ' + error.message, 'error');
+            } finally {
+                // Reset button state
+                saveBtn.disabled = false;
+                saveBtnText.textContent = 'Save Configuration';
+            }
+        });
+
+        // Show alert messages
+        function showAlert(message, type) {
+            const container = document.getElementById('alertContainer');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert ${type}`;
+            alertDiv.textContent = message;
+            
+            container.appendChild(alertDiv);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.parentNode.removeChild(alertDiv);
+                }
+            }, 5000);
+        }
+
+        // Clean up intervals when page unloads
+        window.addEventListener('beforeunload', function() {
+            if (scanInterval) {
+                clearInterval(scanInterval);
+            }
+        });
+    </script>
+</body>
+</html>

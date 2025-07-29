@@ -54,6 +54,9 @@ extern const uint8_t ota_html_end[] asm("_binary_ota_html_end");
 extern const uint8_t index_html_start[] asm("_binary_index_html_start");
 extern const uint8_t index_html_end[] asm("_binary_index_html_end");
 
+extern const uint8_t wifi_html_start[] asm("_binary_wifimanager_html_start");  // wifimanager.html
+extern const uint8_t wifi_html_end[] asm("_binary_wifimanager_html_end");
+
 /**
  * Decode URL-encoded string in place.
  */
@@ -198,6 +201,13 @@ esp_err_t http_server_get_handler(httpd_req_t *req)
         httpd_resp_set_type(req, http_content_type_html);
         httpd_resp_set_hdr(req, "Content-Encoding", "html");
         httpd_resp_send(req, (const char *)index_html_start, index_html_end - index_html_start);
+    }
+    if (strcmp(req->uri, "/wifi_manager") == 0)
+    {
+        httpd_resp_set_status(req, http_200_hdr);
+        httpd_resp_set_type(req, http_content_type_html);
+        httpd_resp_set_hdr(req, "Content-Encoding", "html");
+        httpd_resp_send(req, (const char *)wifi_html_start, wifi_html_end - wifi_html_start);
     }
     // else if (strcmp(req->uri, "/favicon.1e51c1d1.ico") == 0)
     // {
@@ -372,7 +382,7 @@ esp_err_t http_server_get_handler(httpd_req_t *req)
         {
             httpd_resp_set_status(req, http_200_hdr);
             httpd_resp_set_type(req,http_content_type_txt);
-            httpd_resp_send(req, "Log in OK!", HTTPD_RESP_USE_STRLEN);
+            httpd_resp_send(req, "ok", HTTPD_RESP_USE_STRLEN);
         }
         else{
             httpd_resp_set_status(req, http_400_hdr);

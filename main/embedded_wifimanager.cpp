@@ -34,6 +34,10 @@ char DNSAddress[16] = "8.8.8.8";
 
 #define INITIAL_AP_TIME 60000
 
+bool check_wm_state_station() { 
+  return station_mode == 1;
+}
+
 
 
 void reset_initial_ap_timer() {

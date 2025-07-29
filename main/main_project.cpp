@@ -7,6 +7,8 @@
 #include <WiFi.h>
 #include <esp_pm.h>
 #include <SPIFFS.h>
+#include <PubSubClient.h>
+#include "MQTT.h"
 
 
 
@@ -18,6 +20,13 @@ uint32_t check_wifi_timer = 0;
 extern bool wifi_scan_start;
 
 extern bool flashUpdateRequest;
+
+/// sructure that contain MQTT settings
+extern struct mqtt_set mqtt_setting;
+extern WiFiClient espClient;
+extern PubSubClient mqttclient;
+extern unsigned int MQTTIntervalTimer;
+extern bool mqtt_update_flag;
 
 
 
@@ -31,6 +40,7 @@ void setup(){
   readSystemVariables();
   wm_init();
   webserver_task();
+  MQTT_init();
 }
 
 void loop(){
@@ -51,7 +61,31 @@ void loop(){
     {
       flashUpdateRequest = false;
       saveSystemVariables();
+      if (mqtt_update_flag) {
+        mqttclient.disconnect();
+        if ((mqtt_setting.interval >= 1) && (connected && check_wm_state_station())) {
+          mqttclient.setServer(mqtt_setting.broker,(unsigned short)strtoul(mqtt_setting.port, NULL, 0));
+          reconnect();
+        }
+        mqtt_update_flag = false;
+      }
     }
     
-    saveSystemVariables();
+    // mqtt client connect and sending messages if required
+    if ((mqtt_setting.interval >= 1) && (connected && check_wm_state_station()) && !mqttclient.connected()) {
+        reconnect();
+    }
+    if ((mqtt_setting.interval >= 1) &&
+        (millis() - MQTTIntervalTimer > mqtt_setting.interval ) &&
+        (connected && check_wm_state_station()) && mqttclient.connected()) {
+        //Serial.println("start send mqtt");
+        MQTT_Log();
+        MQTTIntervalTimer = millis();
+    }
+    if (connected && check_wm_state_station()) {
+        mqttclient.loop();
+    }
+
+    
+
 }

@@ -24,7 +24,7 @@ typedef struct wifi_station_reconnect_flag {
 enum wifi_scan_states { INIT = 'I', STARTED = 'S', FINISHED = 'F' };
 
 
-
+bool check_wm_state_station();
 void wm_init();
 void wm_loop();
 void wm_activity_callback();
