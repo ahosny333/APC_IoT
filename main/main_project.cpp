@@ -76,7 +76,7 @@ void loop(){
         reconnect();
     }
     if ((mqtt_setting.interval >= 1) &&
-        (millis() - MQTTIntervalTimer > mqtt_setting.interval ) &&
+        (millis() - MQTTIntervalTimer > mqtt_setting.interval * 1000 ) &&
         (connected && check_wm_state_station()) && mqttclient.connected()) {
         //Serial.println("start send mqtt");
         MQTT_Log();

@@ -9,13 +9,17 @@
 #include "main.h"
 #include <Arduino.h>
 #include "embedded_wifimanager.h"
+#include "mqtt.h"
 
 char user_token[10];
 char app_id[10];
 extern uint8_t station_mode,go_station;
 extern wifi_settings_t device_wifi_settings;
+extern struct mqtt_set mqtt_setting;
 
 void readSystemVariables() {
+    //  Clear MQQT
+    memset((void *)&mqtt_setting, 0, sizeof(mqtt_setting));
 
     nvs_handle my_handle;
     //printf("\nOpening Non-Volatile Storage (NVS) handle... for read \n");
@@ -54,6 +58,14 @@ void readSystemVariables() {
         {
             memcpy((void *)&device_wifi_settings, (void *)&temp_device_wifi_settings,sizeof(device_wifi_settings));
         }
+
+        struct mqtt_set temp_mqtt_setting;
+        size = sizeof(temp_mqtt_setting);
+        err = nvs_get_blob(my_handle, "mqtt_settings", (void *)&temp_mqtt_setting, &size);
+        if(err == ESP_OK)
+        {
+            memcpy((void *)&mqtt_setting, (void *)&temp_mqtt_setting,sizeof(mqtt_setting));
+        }
         // Serial.println(device_wifi_settings.ssid);
         // Serial.println(device_wifi_settings.password);
             
@@ -81,6 +93,8 @@ void saveSystemVariables() {
       err = nvs_set_str(my_handle, "app_id", app_id); 
       size = sizeof(device_wifi_settings);
       err = nvs_set_blob(my_handle, "wifi_settings", (void *)&device_wifi_settings,size); 
+      size = sizeof(mqtt_setting);
+      err = nvs_set_blob(my_handle, "mqtt_settings", (void *)&mqtt_setting,size);
 
       err = nvs_commit(my_handle);
       nvs_close(my_handle);

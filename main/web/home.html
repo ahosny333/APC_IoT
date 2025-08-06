@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Management Console</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            height: 100vh;
+            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            transform: translateX(0);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-280px);
+        }
+
+        .sidebar-header {
+            padding: 25px 20px;
+            background: rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .sidebar-header p {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .nav-menu {
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+            position: relative;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-left-color: #3498db;
+        }
+
+        .nav-item.active {
+            background: rgba(52, 152, 219, 0.2);
+            border-left-color: #3498db;
+        }
+
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+            border-right: 8px solid #f5f7fa;
+        }
+
+        .nav-icon {
+            font-size: 18px;
+            margin-right: 15px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .nav-text {
+            font-weight: 500;
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            background: #e74c3c;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            margin-left: 280px;
+            min-height: 100vh;
+            background: #f5f7fa;
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-content.expanded {
+            margin-left: 0;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .menu-toggle {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 10px;
+            margin-right: 15px;
+            border-radius: 5px;
+            transition: background 0.2s ease;
+        }
+
+        .menu-toggle:hover {
+            background: #f0f0f0;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.online {
+            background: #27ae60;
+        }
+
+        .status-dot.offline {
+            background: #e74c3c;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .page {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Card Styles */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .card-icon {
+            font-size: 20px;
+            margin-right: 12px;
+            color: #3498db;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* Button Styles */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-icon {
+            margin-right: 8px;
+        }
+
+        /* Network List Styles */
+        .networks-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .network-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .network-item:hover {
+            background: #e3f2fd;
+            transform: translateX(3px);
+        }
+
+        .network-item.selected {
+            border-color: #3498db;
+            background: #e8f4fd;
+            box-shadow: 0 2px 10px rgba(52, 152, 219, 0.2);
+        }
+
+        .network-info {
+            display: flex;
+            align-items: center;
+        }
+
+        .network-icon {
+            margin-right: 12px;
+            font-size: 16px;
+        }
+
+        .network-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .signal-info {
+            display: flex;
+            align-items: center;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .signal-strength {
+            margin-left: 8px;
+        }
+
+        /* Alert Styles */
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid;
+            animation: slideDown 0.3s ease;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-left-color: #27ae60;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left-color: #e74c3c;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left-color: #3498db;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left-color: #f39c12;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Dashboard Placeholder */
+        .dashboard-placeholder {
+            text-align: center;
+            padding: 60px 20px;
+            color: #7f8c8d;
+        }
+
+        .dashboard-placeholder .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .dashboard-placeholder h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .dashboard-placeholder p {
+            font-size: 16px;
+            max-width: 400px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-280px);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .content {
+                padding: 20px 15px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                padding: 15px 20px;
+            }
+
+            .page-title {
+                font-size: 20px;
+            }
+        }
+
+        /* Overlay for mobile menu */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            display: none;
+        }
+
+        .overlay.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h1>ESP32 Console</h1>
+            <p>Device Management Interface</p>
+        </div>
+        <div class="nav-menu">
+            <div class="nav-item active" data-page="dashboard">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Dashboard</span>
+            </div>
+            <div class="nav-item" data-page="wifi">
+                <span class="nav-icon">📶</span>
+                <span class="nav-text">Wi-Fi Settings</span>
+            </div>
+            <div class="nav-item" data-page="mqtt">
+                <span class="nav-icon">📡</span>
+                <span class="nav-text">MQTT Settings</span>
+            </div>
+            <div class="nav-item" data-page="ota" style="opacity: 0.5;">
+                <span class="nav-icon">🔄</span>
+                <span class="nav-text">Firmware OTA</span>
+                <span class="nav-badge">Soon</span>
+            </div>
+            <div class="nav-item" data-page="calibration" style="opacity: 0.5;">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-text">Calibration</span>
+                <span class="nav-badge">Soon</span>
+            </div>
+            <div class="nav-item" data-page="logs" style="opacity: 0.5;">
+                <span class="nav-icon">📋</span>
+                <span class="nav-text">Logs & Advanced</span>
+                <span class="nav-badge">Soon</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Overlay for mobile -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+        <header class="header">
+            <div class="header-left">
+                <button class="menu-toggle" id="menuToggle">☰</button>
+                <h1 class="page-title" id="pageTitle">Dashboard</h1>
+            </div>
+            <div class="status-indicator">
+                <div class="status-dot online" id="statusDot"></div>
+                <span id="statusText">Device Online</span>
+            </div>
+        </header>
+
+        <div class="content">
+            <!-- Dashboard Page -->
+            <div class="page active" id="dashboard">
+                <div class="card">
+                    <div class="dashboard-placeholder">
+                        <div class="icon">📊</div>
+                        <h2>Real-time Data Display</h2>
+                        <p>Real-time data monitoring, sensor readings, and device status will be available soon. This dashboard will show live metrics and system information.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wi-Fi Settings Page -->
+            <div class="page" id="wifi">
+                <!-- Current Wi-Fi Status -->
+                <div class="card" id="currentWifiCard" style="display: none;">
+                    <div class="card-header">
+                        <span class="card-icon">📋</span>
+                        <span class="card-title">Current Wi-Fi Configuration</span>
+                    </div>
+                    <div class="alert-info">
+                        <strong>SSID:</strong> <span id="currentSSID">-</span><br>
+                        <strong>Mode:</strong> <span id="currentMode">-</span><br>
+                        <strong>Status:</strong> <span id="connectionStatus">-</span>
+                    </div>
+                </div>
+
+                <!-- Network Scanner -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">🔍</span>
+                        <span class="card-title">Scan Available Networks</span>
+                    </div>
+                    <button class="btn btn-primary" id="scanBtn" onclick="startNetworkScan()">
+                        <span id="scanBtnText">🔍 Scan Networks</span>
+                    </button>
+                    <div id="networksContainer" class="networks-list"></div>
+                </div>
+
+                <!-- Wi-Fi Configuration -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">⚙️</span>
+                        <span class="card-title">Wi-Fi Configuration</span>
+                    </div>
+                    <form id="wifiForm">
+                        <div class="form-group">
+                            <label for="wifiSsid">Network Name (SSID)</label>
+                            <input type="text" id="wifiSsid" placeholder="Enter network name" required>
+                            <div class="form-text">Select from scanned networks or enter manually</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="wifiPassword">Password</label>
+                            <input type="password" id="wifiPassword" placeholder="Enter network password">
+                            <div class="form-text">Leave empty for open networks</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="wifiMode">Connection Mode</label>
+                            <select id="wifiMode">
+                                <option value="1">Station Mode (Connect to Wi-Fi)</option>
+                                <option value="0">Access Point Mode (Create Hotspot)</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success" id="saveWifiBtn">
+                            <span id="saveWifiBtnText">💾 Save Configuration</span>
+                        </button>
+                    </form>
+                </div>
+
+                <div id="wifiAlerts"></div>
+            </div>
+
+            <!-- MQTT Settings Page -->
+            <div class="page" id="mqtt">
+                <!-- Current MQTT Status -->
+                <div class="card" id="currentMqttCard" style="display: none;">
+                    <div class="card-header">
+                        <span class="card-icon">📋</span>
+                        <span class="card-title">Current MQTT Configuration</span>
+                    </div>
+                    <div class="alert-info" id="currentMqttStatus">
+                        <strong>Broker:</strong> <span id="currentBroker">-</span><br>
+                        <strong>Port:</strong> <span id="currentPort">-</span><br>
+                        <strong>Username:</strong> <span id="currentUser">-</span><br>
+                        <strong>Interval:</strong> <span id="currentInterval">-</span> seconds
+                    </div>
+                </div>
+
+                <!-- MQTT Configuration -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">📡</span>
+                        <span class="card-title">MQTT Configuration</span>
+                    </div>
+                    <form id="mqttForm">
+                        <div class="form-group">
+                            <label for="mqttBroker">MQTT Broker</label>
+                            <input type="text" id="mqttBroker" placeholder="mqtt.example.com" maxlength="30" required>
+                            <div class="form-text">Maximum 30 characters</div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="mqttPort">Port</label>
+                                <input type="number" id="mqttPort" placeholder="1883" min="0" max="65535" required>
+                                <div class="form-text">0-65535</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="mqttInterval">Publish Interval (seconds)</label>
+                                <input type="number" id="mqttInterval" placeholder="60" min="0" max="65535" required>
+                                <div class="form-text">0-65535 seconds</div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="mqttUser">Username</label>
+                                <input type="text" id="mqttUser" placeholder="username" maxlength="14">
+                                <div class="form-text">Maximum 14 characters</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="mqttPassword">Password</label>
+                                <input type="password" id="mqttPassword" placeholder="password" maxlength="14">
+                                <div class="form-text">Maximum 14 characters</div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="mqttToken">Device Token</label>
+                            <input type="text" id="mqttToken" placeholder="device123" maxlength="14">
+                            <div class="form-text">Maximum 14 characters - unique device identifier</div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success" id="saveMqttBtn">
+                            <span id="saveMqttBtnText">💾 Save MQTT Configuration</span>
+                        </button>
+                    </form>
+                </div>
+
+                <div id="mqttAlerts"></div>
+            </div>
+
+            <!-- Future Pages (Placeholders) -->
+            <div class="page" id="ota">
+                <div class="card">
+                    <div class="dashboard-placeholder">
+                        <div class="icon">🔄</div>
+                        <h2>Firmware OTA Update</h2>
+                        <p>Over-the-air firmware update functionality will be available in a future release. This will allow you to update the device firmware remotely.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="page" id="calibration">
+                <div class="card">
+                    <div class="dashboard-placeholder">
+                        <div class="icon">⚙️</div>
+                        <h2>Sensor Calibration</h2>
+                        <p>Sensor calibration tools for adjusting offset and gain parameters will be implemented soon. This will ensure accurate sensor readings.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="page" id="logs">
+                <div class="card">
+                    <div class="dashboard-placeholder">
+                        <div class="icon">📋</div>
+                        <h2>Logs & Advanced Settings</h2>
+                        <p>System logs, debugging information, and advanced configuration options will be available in future updates.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Application State
+        let scanInterval = null;
+        let selectedNetwork = null;
+        let isMobile = window.innerWidth <= 768;
+
+        // Initialize Application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeNavigation();
+            initializeMobileMenu();
+            loadCurrentSettings();
+            
+            // Update mobile state on resize
+            window.addEventListener('resize', function() {
+                isMobile = window.innerWidth <= 768;
+                if (!isMobile) {
+                    document.getElementById('sidebar').classList.remove('open');
+                    document.getElementById('overlay').classList.remove('active');
+                }
+            });
+        });
+
+        // Navigation Functions
+        function initializeNavigation() {
+            const navItems = document.querySelectorAll('.nav-item[data-page]');
+            
+            navItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const page = this.dataset.page;
+                    
+                    // Skip disabled items
+                    if (this.style.opacity === '0.5') {
+                        return;
+                    }
+                    
+                    switchPage(page);
+                    
+                    // Close mobile menu
+                    if (isMobile) {
+                        document.getElementById('sidebar').classList.remove('open');
+                        document.getElementById('overlay').classList.remove('active');
+                    }
+                });
+            });
+        }
+
+        function switchPage(pageId) {
+            // Update navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-page="${pageId}"]`).classList.add('active');
+            
+            // Update pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(pageId).classList.add('active');
+            
+            // Update page title
+            const titles = {
+                dashboard: 'Dashboard',
+                wifi: 'Wi-Fi Settings',
+                mqtt: 'MQTT Settings',
+                ota: 'Firmware OTA',
+                calibration: 'Calibration',
+                logs: 'Logs & Advanced'
+            };
+            document.getElementById('pageTitle').textContent = titles[pageId];
+            
+            // Load page-specific data
+            if (pageId === 'wifi') {
+                loadWifiSettings();
+            } else if (pageId === 'mqtt') {
+                loadMqttSettings();
+            }
+        }
+
+        function initializeMobileMenu() {
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+            
+            menuToggle.addEventListener('click', function() {
+                if (isMobile) {
+                    sidebar.classList.toggle('open');
+                    overlay.classList.toggle('active');
+                } else {
+                    sidebar.classList.toggle('collapsed');
+                    document.getElementById('mainContent').classList.toggle('expanded');
+                }
+            });
+            
+            overlay.addEventListener('click', function() {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+            });
+        }
+
+        // Settings Loading Functions
+        async function loadCurrentSettings() {
+            await Promise.all([
+                loadWifiSettings(),
+                loadMqttSettings()
+            ]);
+        }
+
+        async function loadWifiSettings() {
+            try {
+                const response = await fetch('/wifi_settings.json');
+                if (response.ok) {
+                    const settings = await response.json();
+                    
+                    // Update current settings display
+                    document.getElementById('currentSSID').textContent = settings.wifi_ssid || 'Not configured';
+                    document.getElementById('currentMode').textContent = 
+                        settings.wifi_station_flag === 1 ? 'Station Mode' : 'Access Point Mode';
+                    document.getElementById('connectionStatus').textContent = 
+                        settings.wifi_station_flag === 1 ? 'Connected to Wi-Fi' : 'Hosting Access Point';
+                    
+                    document.getElementById('currentWifiCard').style.display = 'block';
+                    
+                    // Update status indicator
+                    updateDeviceStatus(settings.wifi_station_flag === 1);
+                }
+            } catch (error) {
+                console.error('Failed to load Wi-Fi settings:', error);
+            }
+        }
+
+        async function loadMqttSettings() {
+            try {
+                const response = await fetch('/mqtt_settings.json');
+                if (response.ok) {
+                    const settings = await response.json();
+                    
+                    // Update current settings display
+                    document.getElementById('currentBroker').textContent = settings.mqtt_broker || 'Not configured';
+                    document.getElementById('currentPort').textContent = settings.mqtt_port || '-';
+                    document.getElementById('currentUser').textContent = settings.mqtt_user || 'Not set';
+                    document.getElementById('currentInterval').textContent = settings.interval || '-';
+                    
+                    document.getElementById('currentMqttCard').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Failed to load MQTT settings:', error);
+            }
+        }
+
+        function updateDeviceStatus(isConnected) {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            
+            if (isConnected) {
+                statusDot.className = 'status-dot online';
+                statusText.textContent = 'Station Mode - 192.168.1.155';
+            } else {
+                statusDot.className = 'status-dot online';
+                statusText.textContent = 'AP Mode - 192.168.4.1';
+            }
+        }
+
+        // Wi-Fi Network Scanning
+        async function startNetworkScan() {
+            const scanBtn = document.getElementById('scanBtn');
+            const scanBtnText = document.getElementById('scanBtnText');
+            const networksContainer = document.getElementById('networksContainer');
+            
+            // Disable button and show loading state
+            scanBtn.disabled = true;
+            scanBtnText.innerHTML = '<span class="loading"></span>Scanning...';
+            networksContainer.innerHTML = '';
+            
+            try {
+                // First call to initiate scan
+                await fetch('/scanNetwork');
+                
+                // Poll for results every 2 seconds
+                scanInterval = setInterval(async () => {
+                    try {
+                        const response = await fetch('/scanNetwork');
+                        const data = await response.json();
+                        
+                        if (data.status === 1) {
+                            // Scan completed
+                            clearInterval(scanInterval);
+                            displayNetworks(data.networks);
+                            resetScanButton();
+                        } else if (data.status === -1) {
+                            // Scan error
+                            clearInterval(scanInterval);
+                            showAlert('Failed to scan networks. Please try again.', 'error', 'wifiAlerts');
+                            resetScanButton();
+                        }
+                        // If status is 0, continue polling
+                    } catch (error) {
+                        clearInterval(scanInterval);
+                        showAlert('Network scan failed: ' + error.message, 'error', 'wifiAlerts');
+                        resetScanButton();
+                    }
+                }, 2000);
+                
+            } catch (error) {
+                showAlert('Failed to start network scan: ' + error.message, 'error', 'wifiAlerts');
+                resetScanButton();
+            }
+        }
+
+        function resetScanButton() {
+            const scanBtn = document.getElementById('scanBtn');
+            const scanBtnText = document.getElementById('scanBtnText');
+            
+            scanBtn.disabled = false;
+            scanBtnText.innerHTML = '🔍 Scan Networks';
+        }
+
+        function displayNetworks(networks) {
+            const container = document.getElementById('networksContainer');
+            
+            if (networks.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No networks found. Try scanning again.</div>';
+                return;
+            }
+            
+            container.innerHTML = networks.map((network, index) => {
+                const [ssid, rssi, encryption] = network;
+                const signalBars = getSignalBars(rssi);
+                const lockIcon = encryption === 1 ? '🔒' : '🔓';
+                const signalIcon = getSignalIcon(rssi);
+                
+                return `
+                    <div class="network-item" onclick="selectNetwork('${ssid}', ${encryption})" data-ssid="${ssid}">
+                        <div class="network-info">
+                            <span class="network-icon">${lockIcon}</span>
+                            <span class="network-name">${ssid}</span>
+                        </div>
+                        <div class="signal-info">
+                            ${rssi} dBm
+                            <span class="signal-strength">${signalIcon}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getSignalIcon(rssi) {
+            if (rssi >= -50) return '📶';
+            if (rssi >= -60) return '📶';
+            if (rssi >= -70) return '📶';
+            if (rssi >= -80) return '📶';
+            return '📶';
+        }
+
+        function getSignalBars(rssi) {
+            if (rssi >= -50) return 4;
+            if (rssi >= -60) return 3;
+            if (rssi >= -70) return 2;
+            if (rssi >= -80) return 1;
+            return 0;
+        }
+
+        function selectNetwork(ssid, encryption) {
+            // Remove previous selection
+            document.querySelectorAll('.network-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Select current network
+            const networkItem = document.querySelector(`[data-ssid="${ssid}"]`);
+            if (networkItem) {
+                networkItem.classList.add('selected');
+            }
+            
+            // Fill the form
+            document.getElementById('wifiSsid').value = ssid;
+            selectedNetwork = { ssid, encryption };
+            
+            showAlert(`Selected network: ${ssid}`, 'info', 'wifiAlerts');
+        }
+
+        // Wi-Fi Form Submission
+        document.getElementById('wifiForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const ssid = document.getElementById('wifiSsid').value.trim();
+            const password = document.getElementById('wifiPassword').value;
+            const mode = document.getElementById('wifiMode').value;
+            
+            if (!ssid) {
+                showAlert('Please enter a network name (SSID)', 'error', 'wifiAlerts');
+                return;
+            }
+            
+            const saveBtn = document.getElementById('saveWifiBtn');
+            const saveBtnText = document.getElementById('saveWifiBtnText');
+            
+            // Show loading state
+            saveBtn.disabled = true;
+            saveBtnText.innerHTML = '<span class="loading"></span>Saving...';
+            
+            try {
+                const params = new URLSearchParams({
+                    wifi_ssid: ssid,
+                    wifi_password: password,
+                    wifi_station_flag: mode
+                });
+                
+                const response = await fetch(`/settings?${params.toString()}`);
+                
+                if (response.ok) {
+                    const result = await response.text();
+                    if (result.trim() === 'ok') {
+                        showAlert('Wi-Fi settings saved successfully! The device will restart shortly.', 'success', 'wifiAlerts');
+                        setTimeout(() => {
+                            loadWifiSettings();
+                        }, 3000);
+                    } else {
+                        showAlert('Failed to save settings. Please try again.', 'error', 'wifiAlerts');
+                    }
+                } else {
+                    showAlert('Failed to save settings. Server returned an error.', 'error', 'wifiAlerts');
+                }
+            } catch (error) {
+                showAlert('Failed to save settings: ' + error.message, 'error', 'wifiAlerts');
+            } finally {
+                // Reset button state
+                saveBtn.disabled = false;
+                saveBtnText.innerHTML = '💾 Save Configuration';
+            }
+        });
+
+        // MQTT Form Submission
+        document.getElementById('mqttForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Get form values
+            const broker = document.getElementById('mqttBroker').value.trim();
+            const port = parseInt(document.getElementById('mqttPort').value);
+            const user = document.getElementById('mqttUser').value.trim();
+            const password = document.getElementById('mqttPassword').value.trim();
+            const token = document.getElementById('mqttToken').value.trim();
+            const interval = parseInt(document.getElementById('mqttInterval').value);
+            
+            // Validate required fields
+            if (!broker) {
+                showAlert('MQTT Broker is required', 'error', 'mqttAlerts');
+                return;
+            }
+            
+            if (!port || port < 0 || port > 65535) {
+                showAlert('Port must be between 0 and 65535', 'error', 'mqttAlerts');
+                return;
+            }
+            
+            if (!interval || interval < 0 || interval > 65535) {
+                showAlert('Interval must be between 0 and 65535 seconds', 'error', 'mqttAlerts');
+                return;
+            }
+            
+            // Validate string lengths
+            if (broker.length > 30) {
+                showAlert('MQTT Broker must be 30 characters or less', 'error', 'mqttAlerts');
+                return;
+            }
+            
+            if (user.length > 14) {
+                showAlert('Username must be 14 characters or less', 'error', 'mqttAlerts');
+                return;
+            }
+            
+            if (password.length > 14) {
+                showAlert('Password must be 14 characters or less', 'error', 'mqttAlerts');
+                return;
+            }
+            
+            if (token.length > 14) {
+                showAlert('Device Token must be 14 characters or less', 'error', 'mqttAlerts');
+                return;
+            }
+            
+            const saveBtn = document.getElementById('saveMqttBtn');
+            const saveBtnText = document.getElementById('saveMqttBtnText');
+            
+            // Show loading state
+            saveBtn.disabled = true;
+            saveBtnText.innerHTML = '<span class="loading"></span>Saving...';
+            
+            try {
+                const params = new URLSearchParams({
+                    mqtt_broker: broker,
+                    mqtt_port: port,
+                    mqtt_user_name: user,
+                    mqtt_password: password,
+                    mqtt_token: token,
+                    interval: interval
+                });
+                
+                const response = await fetch(`/settings?${params.toString()}`);
+                
+                if (response.ok) {
+                    const result = await response.text();
+                    if (result.includes('Settings updated') || result.trim() === 'ok') {
+                        showAlert('MQTT settings saved successfully!', 'success', 'mqttAlerts');
+                        setTimeout(() => {
+                            loadMqttSettings();
+                        }, 2000);
+                    } else {
+                        showAlert('Failed to save MQTT settings. Please check your input.', 'error', 'mqttAlerts');
+                    }
+                } else {
+                    showAlert('Failed to save MQTT settings. Server validation failed.', 'error', 'mqttAlerts');
+                }
+            } catch (error) {
+                showAlert('Failed to save MQTT settings: ' + error.message, 'error', 'mqttAlerts');
+            } finally {
+                // Reset button state
+                saveBtn.disabled = false;
+                saveBtnText.innerHTML = '💾 Save MQTT Configuration';
+            }
+        });
+
+        // Utility Functions
+        function showAlert(message, type, containerId) {
+            const container = document.getElementById(containerId);
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            
+            // Remove existing alerts of the same type
+            const existingAlerts = container.querySelectorAll(`.alert-${type}`);
+            existingAlerts.forEach(alert => alert.remove());
+            
+            container.appendChild(alertDiv);
+            
+            // Auto-remove after 5 seconds for non-error messages
+            if (type !== 'error') {
+                setTimeout(() => {
+                    if (alertDiv.parentNode) {
+                        alertDiv.parentNode.removeChild(alertDiv);
+                    }
+                }, 5000);
+            }
+        }
+
+        // Clean up intervals when page unloads
+        window.addEventListener('beforeunload', function() {
+            if (scanInterval) {
+                clearInterval(scanInterval);
+            }
+        });
+
+        // Form input validation helpers
+        document.getElementById('mqttBroker').addEventListener('input', function() {
+            const remaining = 30 - this.value.length;
+            const helpText = this.parentNode.querySelector('.form-text');
+            helpText.textContent = `Maximum 30 characters (${remaining} remaining)`;
+            helpText.style.color = remaining < 5 ? '#e74c3c' : '#666';
+        });
+
+        document.getElementById('mqttUser').addEventListener('input', function() {
+            const remaining = 14 - this.value.length;
+            const helpText = this.parentNode.querySelector('.form-text');
+            helpText.textContent = `Maximum 14 characters (${remaining} remaining)`;
+            helpText.style.color = remaining < 2 ? '#e74c3c' : '#666';
+        });
+
+        document.getElementById('mqttPassword').addEventListener('input', function() {
+            const remaining = 14 - this.value.length;
+            const helpText = this.parentNode.querySelector('.form-text');
+            helpText.textContent = `Maximum 14 characters (${remaining} remaining)`;
+            helpText.style.color = remaining < 2 ? '#e74c3c' : '#666';
+        });
+
+        document.getElementById('mqttToken').addEventListener('input', function() {
+            const remaining = 14 - this.value.length;
+            const helpText = this.parentNode.querySelector('.form-text');
+            helpText.textContent = `Maximum 14 characters (${remaining} remaining)`;
+            helpText.style.color = remaining < 2 ? '#e74c3c' : '#666';
+        });
+
+        // Port and interval validation
+        document.getElementById('mqttPort').addEventListener('input', function() {
+            const value = parseInt(this.value);
+            const helpText = this.parentNode.querySelector('.form-text');
+            if (value < 0 || value > 65535) {
+                helpText.textContent = '0-65535 (Invalid range!)';
+                helpText.style.color = '#e74c3c';
+            } else {
+                helpText.textContent = '0-65535';
+                helpText.style.color = '#666';
+            }
+        });
+
+        document.getElementById('mqttInterval').addEventListener('input', function() {
+            const value = parseInt(this.value);
+            const helpText = this.parentNode.querySelector('.form-text');
+            if (value < 0 || value > 65535) {
+                helpText.textContent = '0-65535 seconds (Invalid range!)';
+                helpText.style.color = '#e74c3c';
+            } else {
+                helpText.textContent = '0-65535 seconds';
+                helpText.style.color = '#666';
+            }
+        });
+
+        // Auto-refresh settings periodically
+        setInterval(async () => {
+            const currentPage = document.querySelector('.page.active').id;
+            if (currentPage === 'wifi') {
+                await loadWifiSettings();
+            } else if (currentPage === 'mqtt') {
+                await loadMqttSettings();
+            }
+        }, 30000); // Refresh every 30 seconds
+    </script>
+</body>
+</html>

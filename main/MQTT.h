@@ -4,13 +4,21 @@
 #include <Arduino.h>
 
 // structure that contain mqtt setting parameters
+// struct mqtt_set {
+//   char broker[32] = "broker.mqtt.cool";
+//   char port[33] = "1883";
+//   char user[16];
+//   char password[16];
+//   char token[16];
+//   unsigned short interval = 1000;
+// };
 struct mqtt_set {
-  char broker[32] = "broker.mqtt.cool";
-  char port[33] = "1883";
+  char broker[32];
+  char port[33];
   char user[16];
   char password[16];
-  unsigned short interval = 1000;
-  char response[128];
+  char token[16];
+  unsigned short interval;
 };
 #define MQTT_STRUCT_SIZE_WITHOUT_RESPONSE 99
 

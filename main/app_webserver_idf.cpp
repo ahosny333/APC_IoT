@@ -13,12 +13,15 @@
 #include "mbedtls/base64.h"
 #include "main.h"
 #include "embedded_wifimanager.h"
+#include "MQTT.h"
 
 const char auth_username[15] = "admin";
 const char master_key[15] = "12345678";
 char auth_password[15] = "";
 bool flashUpdateRequest = false;
 extern uint8_t station_mode, go_station ;
+extern bool mqtt_update_flag;
+extern struct mqtt_set mqtt_setting;
 
 bool wifi_scan_start;
 extern enum wifi_scan_states wifi_scan_status;
@@ -53,6 +56,9 @@ extern const uint8_t ota_html_end[] asm("_binary_ota_html_end");
 
 extern const uint8_t index_html_start[] asm("_binary_index_html_start");
 extern const uint8_t index_html_end[] asm("_binary_index_html_end");
+
+extern const uint8_t home_html_start[] asm("_binary_home_html_start");
+extern const uint8_t home_html_end[] asm("_binary_home_html_end");
 
 extern const uint8_t wifi_html_start[] asm("_binary_wifimanager_html_start");  // wifimanager.html
 extern const uint8_t wifi_html_end[] asm("_binary_wifimanager_html_end");
@@ -200,7 +206,7 @@ esp_err_t http_server_get_handler(httpd_req_t *req)
         httpd_resp_set_status(req, http_200_hdr);
         httpd_resp_set_type(req, http_content_type_html);
         httpd_resp_set_hdr(req, "Content-Encoding", "html");
-        httpd_resp_send(req, (const char *)index_html_start, index_html_end - index_html_start);
+        httpd_resp_send(req, (const char *)home_html_start, home_html_end - home_html_start);
     }
     if (strcmp(req->uri, "/wifi_manager") == 0)
     {
@@ -308,15 +314,7 @@ esp_err_t http_server_get_handler(httpd_req_t *req)
 
     //     }
     // }
-    if (strcmp(req->uri, "/test") == 0)
-    {
-        httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");  
-        httpd_resp_set_hdr(req, "Access-Control-Allow-Credentials", "true");
-        httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Authorization");
-        httpd_resp_set_status(req, http_200_hdr);
-        httpd_resp_set_type(req,http_content_type_txt);
-        httpd_resp_send(req, "ok", HTTPD_RESP_USE_STRLEN);
-    }
+
     else if(strstr(req->uri, "/settings"))
     {
 
@@ -331,7 +329,7 @@ esp_err_t http_server_get_handler(httpd_req_t *req)
         buf_len = httpd_req_get_url_query_len(req) + 1;
         if (buf_len > 1) {
             char temp_param[100];
-            char byte_temp[2];
+            char byte_temp[2],mqtt_byte_temp[8];
             buf = (char*)malloc(buf_len);
             if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
                 urldecode(buf);
@@ -368,6 +366,80 @@ esp_err_t http_server_get_handler(httpd_req_t *req)
                         error = true;
                     }
                     memset(byte_temp, 0, sizeof(byte_temp));
+                }
+                // MQTT settings
+                mqtt_set temp_mqtt_setting;
+                bool mqttFlag = false;
+                memset(&temp_mqtt_setting, 0, sizeof(temp_mqtt_setting));
+                if (httpd_query_key_value(buf, "mqtt_broker", temp_param, sizeof(temp_param)) == ESP_OK) {
+                   if (strlen(temp_param) <= 30) {
+                        strcpy((char *)temp_mqtt_setting.broker, temp_param);
+                        mqttFlag = true;
+                        
+                        } else
+                            error = true;
+                        memset(temp_param, 0, sizeof(temp_param));
+                }
+                if (httpd_query_key_value(buf, "mqtt_port", temp_param, sizeof(temp_param)) == ESP_OK) {
+                   if (atoi(temp_param) <= 65535 && atoi(temp_param) >= 0 ) {
+                        
+                        strcpy((char *)temp_mqtt_setting.port, temp_param);
+                        mqttFlag = true;
+                        
+                        } else
+                            error = true;
+                        memset(temp_param, 0, sizeof(temp_param));
+                }
+                if (httpd_query_key_value(buf, "mqtt_user_name", temp_param, sizeof(temp_param)) == ESP_OK) {
+                   if (strlen(temp_param) <= 14) {
+                                            
+                        strcpy((char *)temp_mqtt_setting.user, temp_param);
+                        mqttFlag = true;
+                        } else
+                            error = true;
+                        memset(temp_param, 0, sizeof(temp_param));
+                }
+                if (httpd_query_key_value(buf, "mqtt_password", temp_param, sizeof(temp_param)) == ESP_OK) {
+                   if (strlen(temp_param) <= 14) {
+                                  
+                        strcpy((char *)temp_mqtt_setting.password, temp_param);
+                        mqttFlag = true;
+                        
+                        } else
+                            error = true;
+                        memset(temp_param, 0, sizeof(temp_param));
+                }
+
+                if (httpd_query_key_value(buf, "mqtt_token", temp_param, sizeof(temp_param)) == ESP_OK) {
+                   if (strlen(temp_param) <= 14) {
+                                  
+                        strcpy((char *)temp_mqtt_setting.token, temp_param);
+                        mqttFlag = true;
+                        
+                        } else
+                            error = true;
+                        memset(temp_param, 0, sizeof(temp_param));
+                }
+
+                if (httpd_query_key_value(buf, "interval", mqtt_byte_temp, sizeof(mqtt_byte_temp)) == ESP_OK) {
+                    //ESP_LOGI(TAG, "Found URL query => %s", mqtt_byte_temp);
+                    if( atoi(mqtt_byte_temp) <= 65535 && atoi(mqtt_byte_temp) >= 0 ){
+                    temp_mqtt_setting.interval=atoi(mqtt_byte_temp);
+                    //ESP_LOGI(TAG, "UPDATE MQTT FREQ: %d", temp_mqtt_setting.interval);
+                    mqttFlag = true;
+                    }
+                    else
+                        error = true;
+                    memset(mqtt_byte_temp, 0, sizeof(mqtt_byte_temp));
+                }
+
+                if (mqttFlag) {
+                    if (!error)
+                    {
+                        memcpy(&mqtt_setting,&temp_mqtt_setting,sizeof(mqtt_setting));
+                        flashUpdateRequest = true;
+                        mqtt_update_flag = true;
+                    }
                 }
                 
                 
@@ -468,6 +540,20 @@ esp_err_t http_server_get_handler(httpd_req_t *req)
         httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");  
         httpd_resp_set_hdr(req, "Access-Control-Allow-Credentials", "true");
         httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Authorization");    
+        httpd_resp_set_status(req, http_200_hdr);
+        httpd_resp_set_type(req,http_content_type_txt);
+        httpd_resp_send(req, text_string, HTTPD_RESP_USE_STRLEN);
+    }
+    if (strcmp(req->uri, "/mqtt_settings.json") == 0)
+    {
+        memset(text_string, 0, sizeof(text_string));
+        snprintf(text_string, sizeof(text_string),
+           "{\"mqtt_broker\":\"%s\",\"mqtt_port\":\"%s\",\"mqtt_user\":\"%s\",\"mqtt_password\":\"%s\",\"mqtt_token\":\"%s\",\"interval\":%d}",
+           mqtt_setting.broker, mqtt_setting.port, mqtt_setting.user, mqtt_setting.password, mqtt_setting.token,
+           mqtt_setting.interval);
+        httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");  
+        httpd_resp_set_hdr(req, "Access-Control-Allow-Credentials", "true");
+        httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Authorization");
         httpd_resp_set_status(req, http_200_hdr);
         httpd_resp_set_type(req,http_content_type_txt);
         httpd_resp_send(req, text_string, HTTPD_RESP_USE_STRLEN);
