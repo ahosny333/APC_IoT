@@ -73,8 +73,8 @@ void reconnect()
 void MQTT_Log() {
 
   char topic[50];
-  sprintf(topic, "%s/data",test_topic_mac );
-  mqttclient.publish(topic,"data");
+  sprintf(topic, "device/%s/%s/data",test_topic_mac,mqtt_setting.token);
+  mqttclient.publish(topic,"{\"data\":\"111\"}");
 
 }
 
