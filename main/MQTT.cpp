@@ -8,8 +8,9 @@
 
 /// sructure that contain MQTT settings
 struct mqtt_set mqtt_setting;
-WiFiClient espClient;
-PubSubClient mqttclient(espClient);
+// WiFiClient espClient;
+// PubSubClient mqttclient(espClient);
+extern PubSubClient mqttclient;
 unsigned int MQTTIntervalTimer = 0;
 bool mqtt_update_flag;
 static char test_topic_mac[13];
