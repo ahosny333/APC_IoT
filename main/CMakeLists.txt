@@ -4,6 +4,7 @@ set(srcs
   credentials.cpp
   app_webserver_idf.cpp
   MQTT.cpp
+  dse_modbus.cpp
   )
 
 idf_component_register(SRCS ${srcs} 

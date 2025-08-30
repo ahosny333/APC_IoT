@@ -8,6 +8,9 @@
 #include <esp_pm.h>
 #include <SPIFFS.h>
 #include <PubSubClient.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "dse_modbus.h"
 #include "MQTT.h"
 
 
@@ -37,14 +40,16 @@ void setup(){
   while(!Serial){
     ; // wait for serial port to connect
   }
+  Serial2.begin(115200, SERIAL_8N1);
   readSystemVariables();
   wm_init();
   webserver_task();
   MQTT_init();
+  xTaskCreate( dse_task, "dse_task", 5000, NULL, 6, NULL);
 }
 
 void loop(){
-    Serial.println("loop");
+    //Serial.println("loop");
     delay(1000);
     if (millis() - check_wifi_timer > check_wifi_period) {
       check_wifi_timer = millis();

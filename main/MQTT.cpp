@@ -5,6 +5,10 @@
 #include <PubSubClient.h>
 #include "embedded_wifimanager.h"
 #include "credentials.h"
+#include "dse_modbus.h"
+//extern char modbus_string[1000];
+extern bool dse_modbus_success;
+extern struct dse_modbus_data dse_data;
 
 /// sructure that contain MQTT settings
 struct mqtt_set mqtt_setting;
@@ -74,7 +78,31 @@ void MQTT_Log() {
 
   char topic[50];
   sprintf(topic, "device/%s/%s/data",test_topic_mac,mqtt_setting.token);
-  mqttclient.publish(topic,"{\"data\":\"111\"}");
+  char text_string[1000];
+
+  memset(text_string, 0, sizeof(text_string));
+  if(dse_modbus_success)
+  {
+      
+      //sprintf(modbus_string,"{\"status\":1,\"oil_p\":%d,\"cool_t\":%d,\"oil_t\":%d,\"fuel_l\":%d,\"cgh_v\":%.2f,\"bat_v\":%.2f,\"rpm\":%d,\"f\":%.2f,\"v\":[%.2f,%.2f,%.2f,%.2f,%.2f,%.2f],\"a\":[%.2f,%.2f,%.2f,%.2f],\"w\":[%" PRId32 ",%" PRId32 ",%" PRId32"]}", 
+      sprintf(text_string,
+          "{\"status\":1,\"oil_p\":%d,\"cool_t\":%d,\"oil_t\":%d,\"fuel_l\":%d,\"cgh_v\":%.2f,\"bat_v\":%.2f,\"rpm\":%d,\"f\":%.2f,"
+          "\"v\":[%.2f,%.2f,%.2f,%.2f,%.2f,%.2f],"
+          "\"a\":[%.2f,%.2f,%.2f,%.2f],"
+          "\"w\":[%" PRId32 ",%" PRId32 ",%" PRId32 "]}",
+      dse_data.oil_pressure,
+      dse_data.cool_temp,dse_data.oil_temp,
+      dse_data.fuel_level, dse_data.chg_volt, dse_data.bat_volt, dse_data.engine_speed,
+      dse_data.m_freq,dse_data.volt[0],dse_data.volt[1],dse_data.volt[2],dse_data.volt[3],dse_data.volt[4],dse_data.volt[5],
+      dse_data.current[0],dse_data.current[1],dse_data.current[2],dse_data.current[3],dse_data.watt[0],dse_data.watt[1],dse_data.watt[2]);
+
+  }
+  else{
+      sprintf(text_string,"{\"status\":0}");
+  }
+
+  //mqttclient.publish(topic,"{\"data\":\"111\"}");
+  mqttclient.publish(topic,text_string);
 
 }
 

@@ -14,6 +14,10 @@
 #include "main.h"
 #include "embedded_wifimanager.h"
 #include "MQTT.h"
+#include "dse_modbus.h"
+//extern char modbus_string[1000];
+extern bool dse_modbus_success;
+extern struct dse_modbus_data dse_data;
 
 const char auth_username[15] = "admin";
 const char master_key[15] = "12345678";
@@ -624,6 +628,34 @@ esp_err_t http_server_get_handler(httpd_req_t *req)
         httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Authorization");
         httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
         httpd_resp_send(req, (const char *)ota_html_start, ota_html_end - ota_html_start);
+    }
+    else if (strcmp(req->uri, "/test_modbus") == 0)
+    {
+        memset(text_string, 0, sizeof(text_string));
+        if(dse_modbus_success)
+        {
+            
+            //sprintf(modbus_string,"{\"status\":1,\"oil_p\":%d,\"cool_t\":%d,\"oil_t\":%d,\"fuel_l\":%d,\"cgh_v\":%.2f,\"bat_v\":%.2f,\"rpm\":%d,\"f\":%.2f,\"v\":[%.2f,%.2f,%.2f,%.2f,%.2f,%.2f],\"a\":[%.2f,%.2f,%.2f,%.2f],\"w\":[%" PRId32 ",%" PRId32 ",%" PRId32"]}", 
+            sprintf(text_string,
+                "{\"status\":1,\"oil_p\":%d,\"cool_t\":%d,\"oil_t\":%d,\"fuel_l\":%d,\"cgh_v\":%.2f,\"bat_v\":%.2f,\"rpm\":%d,\"f\":%.2f,"
+                "\"v\":[%.2f,%.2f,%.2f,%.2f,%.2f,%.2f],"
+                "\"a\":[%.2f,%.2f,%.2f,%.2f],"
+                "\"w\":[%" PRId32 ",%" PRId32 ",%" PRId32 "]}",
+            dse_data.oil_pressure,
+            dse_data.cool_temp,dse_data.oil_temp,
+            dse_data.fuel_level, dse_data.chg_volt, dse_data.bat_volt, dse_data.engine_speed,
+            dse_data.m_freq,dse_data.volt[0],dse_data.volt[1],dse_data.volt[2],dse_data.volt[3],dse_data.volt[4],dse_data.volt[5],
+            dse_data.current[0],dse_data.current[1],dse_data.current[2],dse_data.current[3],dse_data.watt[0],dse_data.watt[1],dse_data.watt[2]);
+
+        }
+        else{
+            sprintf(text_string,"{\"status\":0}");
+        }
+
+        httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");  
+        httpd_resp_set_status(req, http_200_hdr);
+        httpd_resp_set_type(req,http_content_type_txt);
+        httpd_resp_send(req, text_string, HTTPD_RESP_USE_STRLEN);
     }
     return ESP_OK;
 }

@@ -18,6 +18,8 @@
 #define check_wifi_period 1000
 #define INITIAL_AP_TIME 60000
 #define AP_MODE_PIN 21
+#define RTU_DE_PIN 4
+
 
 
 

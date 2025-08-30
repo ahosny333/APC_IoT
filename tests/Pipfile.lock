@@ -1,0 +1,40 @@
+{
+    "_meta": {
+        "hash": {
+            "sha256": "041f24a19a1db32a3c1ddec0b9f24ac621e9aed4bef5fdd147de86ec7d3c48d5"
+        },
+        "pipfile-spec": 6,
+        "requires": {
+            "python_version": "3.11"
+        },
+        "sources": [
+            {
+                "name": "pypi",
+                "url": "https://pypi.org/simple",
+                "verify_ssl": true
+            }
+        ]
+    },
+    "default": {
+        "pymodbus": {
+            "extras": [
+                "serial"
+            ],
+            "hashes": [
+                "sha256:26c1aa9919b24f2247794d5d9d80f65ec06fdfd9bd6b76b81d446b55335cabf3",
+                "sha256:c861d30390d7b7cd0bca7b529392fc58fc35b63947d6ef574192b8026180f1c7"
+            ],
+            "markers": "python_full_version >= '3.8.0'",
+            "version": "==3.5.2"
+        },
+        "pyserial": {
+            "hashes": [
+                "sha256:3c77e014170dfffbd816e6ffc205e9842efb10be9f58ec16d3e8675b4925cddb",
+                "sha256:c4451db6ba391ca6ca299fb3ec7bae67a5c55dde170964c7a14ceefec02f2cf0"
+            ],
+            "index": "pypi",
+            "version": "==3.5"
+        }
+    },
+    "develop": {}
+}
