@@ -15,6 +15,7 @@ struct dse_modbus_data
     float volt[6];
     float current[4];
     int32_t watt[3];
+    uint16_t control_mode;
 
 };
 

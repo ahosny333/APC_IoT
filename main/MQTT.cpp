@@ -130,7 +130,7 @@ uint8_t parse_payload(char *payload) {
 
 static void MQTT_callback(char *topic, byte *payload, unsigned int length)
 {
-  DEBUG_PRINTLN("mqtt Message arrived ");
+  // DEBUG_PRINTLN("mqtt Message arrived ");
   DEBUG_PRINT(topic);
   
 
@@ -145,9 +145,9 @@ static void MQTT_callback(char *topic, byte *payload, unsigned int length)
     buf[length] = '\0';   
     if(parse_payload(buf))
     {
-      DEBUG_PRINTLN("success receieve command");
-      DEBUG_PRINTLN(command_name);
-      DEBUG_PRINTLN(command_value);
+      // DEBUG_PRINTLN("success receieve command");
+      // DEBUG_PRINTLN(command_name);
+      // DEBUG_PRINTLN(command_value);
       start_write = true;
 
     }

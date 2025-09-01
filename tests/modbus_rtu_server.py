@@ -37,7 +37,7 @@ class ModbusRtuSimulator:
     def setup_datastore(self):
         """Initialize the Modbus datastore with default values"""
         # Initialize holding registers (read-write)
-        hr_data = [0] * 2000  # Create 2000 holding registers, initialized to 0
+        hr_data = [0] * 5000  # Create 2000 holding registers, initialized to 0
         
         # Initialize input registers (read-only) with default values
         # Based on the register specifications provided
@@ -93,6 +93,22 @@ class ModbusRtuSimulator:
         
         # Create server context with single slave
         self.context = ModbusServerContext(slaves={self.slave_id: self.store}, single=False)
+
+    def ones_complement_16bit(self,value):
+        """
+        Calculate the 16-bit one's complement of a number.
+        
+        Parameters:
+        value (int): The input value (should be in range 0-65535)
+        
+        Returns:
+        int: The 16-bit one's complement of the input value
+        """
+        # Ensure the value is within 16-bit range
+        value = value & 0xFFFF
+        
+        # Calculate one's complement by inverting all bits
+        return (~value) & 0xFFFF
     
     def to_twos_complement(self, value, bits):
         """Convert a signed integer to two's complement format"""
@@ -214,19 +230,31 @@ class ModbusRtuSimulator:
                 power = random.randint(20000, 24000)  # 20,000-24,000 W
                 self.set_32bit_value(slave_context, 3, 64 + offset, power, signed=True)
                 
-                # Update some of the 8680 registers (95-123)
-                for i in range(95, 124):
-                    if random.random() > 0.7:  # 30% chance to update each register
-                        current_val = slave_context.getValues(4, i, count=1)[0]
-                        new_val = max(0, min(65535, current_val + random.randint(-10, 10)))
-                        slave_context.setValues(4, i, [new_val])
+                # # Update some of the 8680 registers (95-123)
+                # for i in range(95, 124):
+                #     if random.random() > 0.7:  # 30% chance to update each register
+                #         current_val = slave_context.getValues(4, i, count=1)[0]
+                #         new_val = max(0, min(65535, current_val + random.randint(-10, 10)))
+                #         slave_context.setValues(4, i, [new_val])
                 
-                # Update S1/S2 load mimic registers (180-192)
-                for i in range(180, 193):
-                    if random.random() > 0.5:  # 50% chance to update each register
-                        current_val = slave_context.getValues(4, i, count=1)[0]
-                        new_val = max(0, min(65535, current_val + random.randint(-50, 50)))
-                        slave_context.setValues(4, i, [new_val])
+                # # Update S1/S2 load mimic registers (180-192)
+                # for i in range(180, 193):
+                #     if random.random() > 0.5:  # 50% chance to update each register
+                #         current_val = slave_context.getValues(4, i, count=1)[0]
+                #         new_val = max(0, min(65535, current_val + random.randint(-50, 50)))
+                #         slave_context.setValues(4, i, [new_val])
+
+                # update control mode 
+                if slave_context.getValues(3, 4104, count=1)[0] == 35700 and slave_context.getValues(3, 4105, count=1)[0] == self.ones_complement_16bit(35700) :
+                    print("stop mode")
+                    slave_context.setValues(3, 772, [0])
+                if slave_context.getValues(3, 4104, count=1)[0] == 35701 and slave_context.getValues(3, 4105, count=1)[0] == self.ones_complement_16bit(35701) :
+                    print("auto mode")
+                    slave_context.setValues(3, 772, [1])
+                if slave_context.getValues(3, 4104, count=1)[0] == 35702 and slave_context.getValues(3, 4105, count=1)[0] == self.ones_complement_16bit(35702) :
+                    print("manual mode")
+                    slave_context.setValues(3, 772, [2])
+                
                 
                 # Sleep for a bit before updating again
                 time.sleep(2)

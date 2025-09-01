@@ -637,11 +637,11 @@ esp_err_t http_server_get_handler(httpd_req_t *req)
             
             //sprintf(modbus_string,"{\"status\":1,\"oil_p\":%d,\"cool_t\":%d,\"oil_t\":%d,\"fuel_l\":%d,\"cgh_v\":%.2f,\"bat_v\":%.2f,\"rpm\":%d,\"f\":%.2f,\"v\":[%.2f,%.2f,%.2f,%.2f,%.2f,%.2f],\"a\":[%.2f,%.2f,%.2f,%.2f],\"w\":[%" PRId32 ",%" PRId32 ",%" PRId32"]}", 
             sprintf(text_string,
-                "{\"status\":1,\"oil_p\":%d,\"cool_t\":%d,\"oil_t\":%d,\"fuel_l\":%d,\"cgh_v\":%.2f,\"bat_v\":%.2f,\"rpm\":%d,\"f\":%.2f,"
+                "{\"status\":1,\"mode\":%d,\"oil_p\":%d,\"cool_t\":%d,\"oil_t\":%d,\"fuel_l\":%d,\"cgh_v\":%.2f,\"bat_v\":%.2f,\"rpm\":%d,\"f\":%.2f,"
                 "\"v\":[%.2f,%.2f,%.2f,%.2f,%.2f,%.2f],"
                 "\"a\":[%.2f,%.2f,%.2f,%.2f],"
                 "\"w\":[%" PRId32 ",%" PRId32 ",%" PRId32 "]}",
-            dse_data.oil_pressure,
+            dse_data.control_mode,dse_data.oil_pressure,
             dse_data.cool_temp,dse_data.oil_temp,
             dse_data.fuel_level, dse_data.chg_volt, dse_data.bat_volt, dse_data.engine_speed,
             dse_data.m_freq,dse_data.volt[0],dse_data.volt[1],dse_data.volt[2],dse_data.volt[3],dse_data.volt[4],dse_data.volt[5],
