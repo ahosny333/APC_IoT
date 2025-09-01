@@ -8,22 +8,32 @@
 
 ModbusRTU dse_rtu;
 uint16_t registers[70];
+uint16_t write_registers [10];
 char modbus_string[1000];
 struct dse_modbus_data dse_data;
 
 enum dse_task_status { read_general=0,read_mains, write_command };
 enum dse_task_status dse_state = read_general;
+enum dse_task_status last_dse_state = read_general;
 uint32_t dse_scan_timer = 0;
 uint16_t dse_scan_interval = 5000; // 2 seconds
 uint8_t dse_request_started = 0;
 
 bool dse_modbus_success = false;
+extern bool start_write;
+extern char command_name[30];
+extern uint8_t command_value;
+
+// Return one's complement of a 16-bit value
+static uint16_t ones_complement(uint16_t value) {
+    return (uint16_t)(~value);
+}
 
 bool dse_cb(Modbus::ResultCode event, uint16_t transactionId, void* data) { 
 
   if (event != Modbus::EX_SUCCESS) {
-    // Serial.print("Request result: 0x");
-    // Serial.print(event, HEX);
+    Serial.print("Request result: 0x");
+    Serial.print(event, HEX);
     dse_request_started = 0;
     //dse_scan_timer = millis();
     dse_modbus_success = false;
@@ -69,6 +79,7 @@ bool dse_cb(Modbus::ResultCode event, uint16_t transactionId, void* data) {
                 
     }
     
+    
 
     // memset(modbus_string,0,sizeof(modbus_string));
     // //sprintf(modbus_string,"{\"status\":1,\"oil_p\":%d,\"cool_t\":%d,\"oil_t\":%d,\"fuel_l\":%d,\"cgh_v\":%.2f,\"bat_v\":%.2f,\"rpm\":%d,\"f\":%.2f,\"v\":[%.2f,%.2f,%.2f,%.2f,%.2f,%.2f],\"a\":[%.2f,%.2f,%.2f,%.2f],\"w\":[%" PRId32 ",%" PRId32 ",%" PRId32"]}", 
@@ -84,6 +95,11 @@ bool dse_cb(Modbus::ResultCode event, uint16_t transactionId, void* data) {
     //   dse_data.current[0],dse_data.current[1],dse_data.current[2],dse_data.current[3],dse_data.watt[0],dse_data.watt[1],dse_data.watt[2]);
 
   }
+  if(dse_state == write_command)
+  {
+    dse_request_started = 0;
+    dse_state = last_dse_state;
+  }
   return true;
 
 
@@ -94,15 +110,65 @@ bool dse_cb(Modbus::ResultCode event, uint16_t transactionId, void* data) {
 void dse_task(void* parameter)
 {
 
-    dse_rtu.begin(&Serial, RTU_DE_PIN, true);
+    dse_rtu.begin(&Serial2, RTU_DE_PIN, true);
     dse_rtu.setBaudrate(115200);
     dse_rtu.master();
     while(1)
     {
-      if(dse_state == write_command && dse_request_started == 0 && !dse_rtu.slave()) 
+      // if(start_write){
+      //   start_write = false;
+      //   Serial.println("write flag on");
+      //   if((strcmp(command_name,"Stop mode") == 0) && command_value == 1) {
+      //     write_registers[0] = 35700;
+      //     write_registers[1] = ones_complement(write_registers[0]);
+      //     last_dse_state = dse_state;
+      //     dse_state = write_command;
+      //   }
+      //   else if((strcmp(command_name,"Auto mode") == 0) && command_value == 1) {
+      //     write_registers[0] = 35701;
+      //     write_registers[1] = ones_complement(write_registers[0]);
+      //     last_dse_state = dse_state;
+      //     dse_state = write_command;
+      //   }
+      //   else if((strcmp(command_name,"Manual mode") == 0) && command_value == 1) {
+      //     write_registers[0] = 35702;
+      //     write_registers[1] = ones_complement(write_registers[0]);
+      //     last_dse_state = dse_state;
+      //     dse_state = write_command;
+      //   }
+      // }
+      
+      //if(dse_state == write_command && dse_request_started == 0 && !dse_rtu.slave()) 
+      if(start_write && dse_request_started == 0 && !dse_rtu.slave()) 
       {
-        dse_request_started = 1;
-
+        start_write = false;
+        Serial.println("write flag on");
+        if((strcmp(command_name,"Stop mode") == 0) && command_value == 1) {
+          write_registers[0] = 35700;
+          write_registers[1] = ones_complement(write_registers[0]);
+          last_dse_state = dse_state;
+          dse_state = write_command;
+        }
+        else if((strcmp(command_name,"Auto mode") == 0) && command_value == 1) {
+          write_registers[0] = 35701;
+          write_registers[1] = ones_complement(write_registers[0]);
+          last_dse_state = dse_state;
+          dse_state = write_command;
+        }
+        else if((strcmp(command_name,"Manual mode") == 0) && command_value == 1) {
+          write_registers[0] = 35702;
+          write_registers[1] = ones_complement(write_registers[0]);
+          last_dse_state = dse_state;
+          dse_state = write_command;
+        }
+        if(dse_state == write_command)
+        {
+          dse_request_started = 1;
+          DEBUG_PRINTLN("Write state");
+          DEBUG_PRINTLN(command_name);
+          DEBUG_PRINTLN(command_value);
+          dse_rtu.writeHreg(SLAVE_ID,4104,write_registers,2,dse_cb);
+        }
       }
       else{
         if(millis() - dse_scan_timer >= dse_scan_interval )
@@ -144,6 +210,7 @@ void dse_task(void* parameter)
 
 
       dse_rtu.task();
+      Serial.println(dse_state);
       delay(1000);
 
     }
