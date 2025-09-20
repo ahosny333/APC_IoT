@@ -33,6 +33,10 @@ extern int scan_task_return;
 
 extern wifi_settings_t device_wifi_settings;
 
+extern bool start_write;
+extern char command_name[30];
+extern uint8_t command_value;
+
 /* const httpd related values stored in ROM */
 const static char http_200_hdr[] = "200 OK";
 // const static char http_302_hdr[] = "302 Found";
@@ -466,7 +470,87 @@ esp_err_t http_server_get_handler(httpd_req_t *req)
             httpd_resp_send(req, "error", HTTPD_RESP_USE_STRLEN);
         }
     }
+    else if(strstr(req->uri, "/command"))
+    {
 
+        // if(basic_auth_get_handler(req,auth_password)!= ESP_OK)
+        // {
+        //     return ESP_FAIL;
+        // }
+       
+        bool error = false;
+        char*  buf;
+        size_t buf_len;
+        buf_len = httpd_req_get_url_query_len(req) + 1;
+        if (buf_len > 1) {
+            char byte_temp[2],mqtt_byte_temp[8];
+            buf = (char*)malloc(buf_len);
+            if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
+                urldecode(buf);
+
+                if (httpd_query_key_value(buf, "mode", mqtt_byte_temp, sizeof(mqtt_byte_temp)) == ESP_OK) {
+                    //ESP_LOGI(TAG, "Found URL query => %s", mqtt_byte_temp);
+                    if( atoi(mqtt_byte_temp) <= 2 && atoi(mqtt_byte_temp) >= 0 ){
+                        if(atoi(mqtt_byte_temp) == 0)
+                        {
+                            strncpy(command_name, "Stop mode", sizeof(command_name) - 1);
+                            command_name[sizeof(command_name) - 1] = '\0'; // Manually null-terminate
+                            command_value = 1;
+                            start_write = true;
+                        }
+                        else if(atoi(mqtt_byte_temp) == 1)
+                        {
+                            strncpy(command_name, "Auto mode", sizeof(command_name) - 1);
+                            command_name[sizeof(command_name) - 1] = '\0'; // Manually null-terminate
+                            command_value = 1;
+                            start_write = true;
+                        }
+                        else if(atoi(mqtt_byte_temp) == 2)
+                        {
+                            strncpy(command_name, "Manual mode", sizeof(command_name) - 1);
+                            command_name[sizeof(command_name) - 1] = '\0'; // Manually null-terminate
+                            command_value = 1;
+                            start_write = true;
+                        }
+                        //ESP_LOGI(TAG, "UPDATE MQTT FREQ: %d", temp_mqtt_setting.interval);
+                    }
+                    else
+                        error = true;
+                    memset(mqtt_byte_temp, 0, sizeof(mqtt_byte_temp));
+                }
+
+
+            }
+            free(buf);
+
+        }
+        httpd_resp_set_hdr(req, "Access-Control-Allow-Credentials", "true");
+        httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Authorization");
+        httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+        if (!error)
+        {
+            httpd_resp_set_status(req, http_200_hdr);
+            httpd_resp_set_type(req,http_content_type_txt);
+            httpd_resp_send(req, "ok", HTTPD_RESP_USE_STRLEN);
+        }
+        else{
+            httpd_resp_set_status(req, http_400_hdr);
+            httpd_resp_set_type(req,http_content_type_txt);
+            httpd_resp_send(req, "error", HTTPD_RESP_USE_STRLEN);
+        }
+    }
+    if (strcmp(req->uri, "/get_mode") == 0)
+    {
+        memset(text_string, 0, sizeof(text_string));
+        snprintf(text_string, sizeof(text_string),
+           "{\"mode\":%d,\"command_send\":\"%s\",\"command_value_send\":%d}",dse_data.control_mode,command_name,command_value);
+        httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");  
+        httpd_resp_set_hdr(req, "Access-Control-Allow-Credentials", "true");
+        httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Authorization");
+        httpd_resp_set_status(req, http_200_hdr);
+        httpd_resp_set_type(req,http_content_type_txt);
+        httpd_resp_send(req, text_string, HTTPD_RESP_USE_STRLEN);
+    }
     // else if (strcmp(req->uri, "/get_settings") == 0)
     // {
     //     //char text_string[200];

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESP32 Management Console</title>
+    <title>ESP32 Control Panel</title>
     <style>
         * {
             margin: 0;
@@ -11,193 +11,100 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --bg-color: #ecf0f1;
+            --text-color: #2c3e50;
+            --sidebar-width: 250px;
+            --card-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f7fa;
-            color: #333;
-            overflow-x: hidden;
+            background: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
         }
 
         /* Sidebar Styles */
         .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 280px;
-            height: 100vh;
-            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+            width: var(--sidebar-width);
+            background: var(--primary-color);
             color: white;
-            transform: translateX(0);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
             transition: transform 0.3s ease;
             z-index: 1000;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .sidebar.collapsed {
-            transform: translateX(-280px);
+            overflow-y: auto;
         }
 
         .sidebar-header {
-            padding: 25px 20px;
-            background: rgba(0, 0, 0, 0.1);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
-        .sidebar-header h1 {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-
-        .sidebar-header p {
-            font-size: 12px;
-            opacity: 0.8;
+        .sidebar-header h2 {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .nav-menu {
+            list-style: none;
             padding: 20px 0;
         }
 
         .nav-item {
+            margin: 5px 0;
+        }
+
+        .nav-link {
             display: flex;
             align-items: center;
+            gap: 15px;
             padding: 15px 20px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            border-left: 3px solid transparent;
-            position: relative;
-        }
-
-        .nav-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-left-color: #3498db;
-        }
-
-        .nav-item.active {
-            background: rgba(52, 152, 219, 0.2);
-            border-left-color: #3498db;
-        }
-
-        .nav-item.active::after {
-            content: '';
-            position: absolute;
-            right: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 0;
-            height: 0;
-            border-top: 8px solid transparent;
-            border-bottom: 8px solid transparent;
-            border-right: 8px solid #f5f7fa;
-        }
-
-        .nav-icon {
-            font-size: 18px;
-            margin-right: 15px;
-            width: 20px;
-            text-align: center;
-        }
-
-        .nav-text {
-            font-weight: 500;
-        }
-
-        .nav-badge {
-            margin-left: auto;
-            background: #e74c3c;
             color: white;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 11px;
-            font-weight: bold;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-size: 1rem;
+        }
+
+        .nav-link:hover {
+            background: rgba(255,255,255,0.1);
+            padding-left: 30px;
+        }
+
+        .nav-link.active {
+            background: var(--secondary-color);
+            border-left: 4px solid white;
         }
 
         /* Main Content Area */
         .main-content {
-            margin-left: 280px;
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 20px;
             min-height: 100vh;
-            background: #f5f7fa;
-            transition: margin-left 0.3s ease;
-        }
-
-        .main-content.expanded {
-            margin-left: 0;
-        }
-
-        .header {
-            background: white;
-            padding: 20px 30px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-        }
-
-        .menu-toggle {
-            background: none;
-            border: none;
-            font-size: 20px;
-            cursor: pointer;
-            padding: 10px;
-            margin-right: 15px;
-            border-radius: 5px;
-            transition: background 0.2s ease;
-        }
-
-        .menu-toggle:hover {
-            background: #f0f0f0;
-        }
-
-        .page-title {
-            font-size: 24px;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            font-size: 14px;
-            color: #666;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 8px;
-            animation: pulse 2s infinite;
-        }
-
-        .status-dot.online {
-            background: #27ae60;
-        }
-
-        .status-dot.offline {
-            background: #e74c3c;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-
-        .content {
-            padding: 30px;
+            width: calc(100% - var(--sidebar-width));
         }
 
         .page {
             display: none;
-            animation: fadeIn 0.3s ease;
+            animation: fadeIn 0.5s ease;
         }
 
         .page.active {
@@ -209,117 +116,246 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Card Styles */
-        .card {
+        /* Header */
+        .page-header {
             background: white;
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 25px;
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
-            border: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 20px;
         }
 
-        .card-header {
+        .page-header h1 {
+            color: var(--primary-color);
             display: flex;
             align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eee;
+            gap: 15px;
         }
 
-        .card-icon {
-            font-size: 20px;
-            margin-right: 12px;
-            color: #3498db;
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 20px;
         }
 
         .card-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #2c3e50;
+            font-size: 1.2rem;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--bg-color);
         }
 
-        /* Form Styles */
+        /* Dashboard Styles */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .kpi-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: transform 0.3s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .kpi-label {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+
+        .kpi-unit {
+            font-size: 0.8rem;
+            color: #95a5a6;
+            margin-top: 5px;
+        }
+
+        /* Control Buttons */
+        .control-buttons {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            border: 2px solid var(--secondary-color);
+            background: white;
+            color: var(--secondary-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .control-btn:hover {
+            background: var(--secondary-color);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .control-btn.active {
+            background: var(--success-color);
+            color: white;
+            border-color: var(--success-color);
+        }
+
+        .control-btn.stop { border-color: var(--danger-color); color: var(--danger-color); }
+        .control-btn.stop:hover { background: var(--danger-color); }
+        .control-btn.auto { border-color: var(--success-color); color: var(--success-color); }
+        .control-btn.auto:hover { background: var(--success-color); }
+        .control-btn.manual { border-color: var(--warning-color); color: var(--warning-color); }
+        .control-btn.manual:hover { background: var(--warning-color); }
+
+        /* Gauge Container */
+        .gauges-section {
+            margin: 30px 0;
+        }
+
+        .gauge-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .gauge-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: var(--card-shadow);
+        }
+
+        .gauge-title {
+            font-size: 1rem;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .gauge {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .gauge-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--secondary-color);
+            margin-top: 10px;
+        }
+
+        /* Alert Box */
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-error {
+            background: #fee;
+            color: var(--danger-color);
+            border: 1px solid var(--danger-color);
+        }
+
+        .alert-success {
+            background: #efe;
+            color: var(--success-color);
+            border: 1px solid var(--success-color);
+        }
+
+        .alert-warning {
+            background: #ffeaa7;
+            color: #d68910;
+            border: 1px solid #f39c12;
+        }
+
+        /* Forms */
         .form-group {
             margin-bottom: 20px;
         }
 
-        .form-group label {
+        .form-label {
             display: block;
             margin-bottom: 8px;
-            font-weight: 600;
-            color: #555;
+            font-weight: 500;
+            color: var(--primary-color);
         }
 
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
+        .form-input, .form-select {
             width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e1e5e9;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            background: white;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
         }
 
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
+        .form-input:focus, .form-select:focus {
             outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+            border-color: var(--secondary-color);
         }
 
         .form-row {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
         }
 
-        .form-text {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
-        }
-
-        /* Button Styles */
         .btn {
-            display: inline-flex;
-            align-items: center;
-            padding: 12px 20px;
+            padding: 12px 30px;
             border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
+            border-radius: 6px;
+            font-size: 1rem;
             cursor: pointer;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            justify-content: center;
+            transition: all 0.3s ease;
+            font-weight: 500;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            background: var(--secondary-color);
             color: white;
-            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
         }
 
         .btn-primary:hover {
+            background: #2980b9;
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
-        }
-
-        .btn-secondary {
-            background: #95a5a6;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #7f8c8d;
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
         }
 
         .btn-success {
-            background: #27ae60;
+            background: var(--success-color);
             color: white;
         }
 
@@ -327,128 +363,54 @@
             background: #229954;
         }
 
-        .btn:disabled {
-            background: #bdc3c7;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .btn-icon {
-            margin-right: 8px;
-        }
-
-        /* Network List Styles */
-        .networks-list {
-            max-height: 400px;
+        /* Network List */
+        .network-list {
+            max-height: 300px;
             overflow-y: auto;
-            margin-top: 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 20px;
         }
 
         .network-item {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px;
-            margin: 8px 0;
-            background: #f8f9fa;
-            border: 2px solid transparent;
-            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: background 0.3s ease;
         }
 
         .network-item:hover {
-            background: #e3f2fd;
-            transform: translateX(3px);
+            background: #f8f9fa;
         }
 
         .network-item.selected {
-            border-color: #3498db;
-            background: #e8f4fd;
-            box-shadow: 0 2px 10px rgba(52, 152, 219, 0.2);
+            background: #e3f2fd;
+            border-left: 3px solid var(--secondary-color);
         }
 
-        .network-info {
+        .network-ssid {
+            font-weight: 500;
+        }
+
+        .network-signal {
             display: flex;
             align-items: center;
-        }
-
-        .network-icon {
-            margin-right: 12px;
-            font-size: 16px;
-        }
-
-        .network-name {
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .signal-info {
-            display: flex;
-            align-items: center;
+            gap: 5px;
             color: #666;
-            font-size: 12px;
-        }
-
-        .signal-strength {
-            margin-left: 8px;
-        }
-
-        /* Alert Styles */
-        .alert {
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin: 15px 0;
-            border-left: 4px solid;
-            animation: slideDown 0.3s ease;
-        }
-
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border-left-color: #27ae60;
-        }
-
-        .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-            border-left-color: #e74c3c;
-        }
-
-        .alert-info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border-left-color: #3498db;
-        }
-
-        .alert-warning {
-            background: #fff3cd;
-            color: #856404;
-            border-left-color: #f39c12;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
 
         /* Loading Spinner */
-        .loading {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #3498db;
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--secondary-color);
             border-radius: 50%;
+            width: 40px;
+            height: 40px;
             animation: spin 1s linear infinite;
-            margin-right: 8px;
+            margin: 20px auto;
         }
 
         @keyframes spin {
@@ -456,825 +418,827 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Dashboard Placeholder */
-        .dashboard-placeholder {
-            text-align: center;
-            padding: 60px 20px;
-            color: #7f8c8d;
+        /* Mobile Menu Toggle */
+        .menu-toggle {
+            display: none;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1001;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
         }
 
-        .dashboard-placeholder .icon {
-            font-size: 64px;
-            margin-bottom: 20px;
-            opacity: 0.5;
-        }
-
-        .dashboard-placeholder h2 {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-
-        .dashboard-placeholder p {
-            font-size: 16px;
-            max-width: 400px;
-            margin: 0 auto;
-            line-height: 1.6;
-        }
-
-        /* Mobile Responsive */
+        /* Responsive Design */
         @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-280px);
+            .menu-toggle {
+                display: block;
             }
 
-            .sidebar.open {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.active {
                 transform: translateX(0);
             }
 
             .main-content {
                 margin-left: 0;
+                width: 100%;
+                padding: 60px 15px 15px;
             }
 
-            .content {
-                padding: 20px 15px;
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .gauge-group {
+                grid-template-columns: 1fr;
+            }
+
+            .control-buttons {
+                flex-direction: column;
             }
 
             .form-row {
                 grid-template-columns: 1fr;
             }
-
-            .header {
-                padding: 15px 20px;
-            }
-
-            .page-title {
-                font-size: 20px;
-            }
         }
 
-        /* Overlay for mobile menu */
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-            display: none;
-        }
-
-        .overlay.active {
-            display: block;
+        /* Canvas gauge styles */
+        canvas {
+            max-width: 100%;
+            height: auto;
         }
     </style>
 </head>
 <body>
-    <!-- Sidebar -->
-    <nav class="sidebar" id="sidebar">
+    <!-- Mobile Menu Toggle -->
+    <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <h1>ESP32 Console</h1>
-            <p>Device Management Interface</p>
+            <h2>⚡ ESP32 Panel</h2>
         </div>
-        <div class="nav-menu">
-            <div class="nav-item active" data-page="dashboard">
-                <span class="nav-icon">📊</span>
-                <span class="nav-text">Dashboard</span>
-            </div>
-            <div class="nav-item" data-page="wifi">
-                <span class="nav-icon">📶</span>
-                <span class="nav-text">Wi-Fi Settings</span>
-            </div>
-            <div class="nav-item" data-page="mqtt">
-                <span class="nav-icon">📡</span>
-                <span class="nav-text">MQTT Settings</span>
-            </div>
-            <div class="nav-item" data-page="ota" style="opacity: 0.5;">
-                <span class="nav-icon">🔄</span>
-                <span class="nav-text">Firmware OTA</span>
-                <span class="nav-badge">Soon</span>
-            </div>
-            <div class="nav-item" data-page="calibration" style="opacity: 0.5;">
-                <span class="nav-icon">⚙️</span>
-                <span class="nav-text">Calibration</span>
-                <span class="nav-badge">Soon</span>
-            </div>
-            <div class="nav-item" data-page="logs" style="opacity: 0.5;">
-                <span class="nav-icon">📋</span>
-                <span class="nav-text">Logs & Advanced</span>
-                <span class="nav-badge">Soon</span>
-            </div>
-        </div>
-    </nav>
+        <nav>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link active" onclick="showPage('dashboard')">
+                        📊 Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showPage('wifi')">
+                        📶 Wi-Fi Settings
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showPage('mqtt')">
+                        📡 MQTT Settings
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showPage('firmware')">
+                        🔄 Firmware Update
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showPage('calibration')">
+                        🔧 Calibration
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
 
-    <!-- Overlay for mobile -->
-    <div class="overlay" id="overlay"></div>
-
-    <!-- Main Content -->
-    <main class="main-content" id="mainContent">
-        <header class="header">
-            <div class="header-left">
-                <button class="menu-toggle" id="menuToggle">☰</button>
-                <h1 class="page-title" id="pageTitle">Dashboard</h1>
-            </div>
-            <div class="status-indicator">
-                <div class="status-dot online" id="statusDot"></div>
-                <span id="statusText">Device Online</span>
-            </div>
-        </header>
-
-        <div class="content">
-            <!-- Dashboard Page -->
-            <div class="page active" id="dashboard">
-                <div class="card">
-                    <div class="dashboard-placeholder">
-                        <div class="icon">📊</div>
-                        <h2>Real-time Data Display</h2>
-                        <p>Real-time data monitoring, sensor readings, and device status will be available soon. This dashboard will show live metrics and system information.</p>
-                    </div>
-                </div>
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <!-- Dashboard Page -->
+        <div id="dashboard" class="page active">
+            <div class="page-header">
+                <h1>📊 Generator Dashboard</h1>
             </div>
 
-            <!-- Wi-Fi Settings Page -->
-            <div class="page" id="wifi">
-                <!-- Current Wi-Fi Status -->
-                <div class="card" id="currentWifiCard" style="display: none;">
-                    <div class="card-header">
-                        <span class="card-icon">📋</span>
-                        <span class="card-title">Current Wi-Fi Configuration</span>
-                    </div>
-                    <div class="alert-info">
-                        <strong>SSID:</strong> <span id="currentSSID">-</span><br>
-                        <strong>Mode:</strong> <span id="currentMode">-</span><br>
-                        <strong>Status:</strong> <span id="connectionStatus">-</span>
-                    </div>
-                </div>
+            <!-- Status Alert -->
+            <div id="statusAlert" class="alert alert-error" style="display: none;">
+                ⚠️ Modbus not working - Unable to fetch data
+            </div>
 
-                <!-- Network Scanner -->
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-icon">🔍</span>
-                        <span class="card-title">Scan Available Networks</span>
-                    </div>
-                    <button class="btn btn-primary" id="scanBtn" onclick="startNetworkScan()">
-                        <span id="scanBtnText">🔍 Scan Networks</span>
+            <!-- Control Buttons -->
+            <div class="card">
+                <h3 class="card-title">Generator Control</h3>
+                <div class="control-buttons">
+                    <button class="control-btn stop" onclick="setGeneratorMode(0)">
+                        🛑 STOP
                     </button>
-                    <div id="networksContainer" class="networks-list"></div>
+                    <button class="control-btn auto" onclick="setGeneratorMode(1)">
+                        🔄 AUTO
+                    </button>
+                    <button class="control-btn manual" onclick="setGeneratorMode(2)">
+                        ⚙️ MANUAL
+                    </button>
                 </div>
-
-                <!-- Wi-Fi Configuration -->
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-icon">⚙️</span>
-                        <span class="card-title">Wi-Fi Configuration</span>
-                    </div>
-                    <form id="wifiForm">
-                        <div class="form-group">
-                            <label for="wifiSsid">Network Name (SSID)</label>
-                            <input type="text" id="wifiSsid" placeholder="Enter network name" required>
-                            <div class="form-text">Select from scanned networks or enter manually</div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="wifiPassword">Password</label>
-                            <input type="password" id="wifiPassword" placeholder="Enter network password">
-                            <div class="form-text">Leave empty for open networks</div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="wifiMode">Connection Mode</label>
-                            <select id="wifiMode">
-                                <option value="1">Station Mode (Connect to Wi-Fi)</option>
-                                <option value="0">Access Point Mode (Create Hotspot)</option>
-                            </select>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-success" id="saveWifiBtn">
-                            <span id="saveWifiBtnText">💾 Save Configuration</span>
-                        </button>
-                    </form>
-                </div>
-
-                <div id="wifiAlerts"></div>
             </div>
 
-            <!-- MQTT Settings Page -->
-            <div class="page" id="mqtt">
-                <!-- Current MQTT Status -->
-                <div class="card" id="currentMqttCard" style="display: none;">
-                    <div class="card-header">
-                        <span class="card-icon">📋</span>
-                        <span class="card-title">Current MQTT Configuration</span>
+            <!-- Engine KPIs -->
+            <div class="card">
+                <h3 class="card-title">Engine Parameters</h3>
+                <div class="dashboard-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-label">RPM</div>
+                        <div class="kpi-value" id="rpm">0</div>
+                        <div class="kpi-unit">rev/min</div>
                     </div>
-                    <div class="alert-info" id="currentMqttStatus">
-                        <strong>Broker:</strong> <span id="currentBroker">-</span><br>
-                        <strong>Port:</strong> <span id="currentPort">-</span><br>
-                        <strong>Username:</strong> <span id="currentUser">-</span><br>
-                        <strong>Interval:</strong> <span id="currentInterval">-</span> seconds
+                    <div class="kpi-card">
+                        <div class="kpi-label">Oil Pressure</div>
+                        <div class="kpi-value" id="oil_p">0</div>
+                        <div class="kpi-unit">KPa</div>
                     </div>
-                </div>
-
-                <!-- MQTT Configuration -->
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-icon">📡</span>
-                        <span class="card-title">MQTT Configuration</span>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Oil Temperature</div>
+                        <div class="kpi-value" id="oil_t">0</div>
+                        <div class="kpi-unit">°C</div>
                     </div>
-                    <form id="mqttForm">
-                        <div class="form-group">
-                            <label for="mqttBroker">MQTT Broker</label>
-                            <input type="text" id="mqttBroker" placeholder="mqtt.example.com" maxlength="30" required>
-                            <div class="form-text">Maximum 30 characters</div>
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="mqttPort">Port</label>
-                                <input type="number" id="mqttPort" placeholder="1883" min="0" max="65535" required>
-                                <div class="form-text">0-65535</div>
-                            </div>
-                            <div class="form-group">
-                                <label for="mqttInterval">Publish Interval (seconds)</label>
-                                <input type="number" id="mqttInterval" placeholder="60" min="0" max="65535" required>
-                                <div class="form-text">0-65535 seconds</div>
-                            </div>
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="mqttUser">Username</label>
-                                <input type="text" id="mqttUser" placeholder="username" maxlength="14">
-                                <div class="form-text">Maximum 14 characters</div>
-                            </div>
-                            <div class="form-group">
-                                <label for="mqttPassword">Password</label>
-                                <input type="password" id="mqttPassword" placeholder="password" maxlength="14">
-                                <div class="form-text">Maximum 14 characters</div>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="mqttToken">Device Token</label>
-                            <input type="text" id="mqttToken" placeholder="device123" maxlength="14">
-                            <div class="form-text">Maximum 14 characters - unique device identifier</div>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-success" id="saveMqttBtn">
-                            <span id="saveMqttBtnText">💾 Save MQTT Configuration</span>
-                        </button>
-                    </form>
-                </div>
-
-                <div id="mqttAlerts"></div>
-            </div>
-
-            <!-- Future Pages (Placeholders) -->
-            <div class="page" id="ota">
-                <div class="card">
-                    <div class="dashboard-placeholder">
-                        <div class="icon">🔄</div>
-                        <h2>Firmware OTA Update</h2>
-                        <p>Over-the-air firmware update functionality will be available in a future release. This will allow you to update the device firmware remotely.</p>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Coolant Temp</div>
+                        <div class="kpi-value" id="cool_t">0</div>
+                        <div class="kpi-unit">°C</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Fuel Level</div>
+                        <div class="kpi-value" id="fuel_l">0</div>
+                        <div class="kpi-unit">%</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Battery Voltage</div>
+                        <div class="kpi-value" id="bat_v">0</div>
+                        <div class="kpi-unit">V</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Alternator Voltage</div>
+                        <div class="kpi-value" id="cgh_v">0</div>
+                        <div class="kpi-unit">V</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Frequency</div>
+                        <div class="kpi-value" id="freq">0</div>
+                        <div class="kpi-unit">Hz</div>
                     </div>
                 </div>
             </div>
 
-            <div class="page" id="calibration">
+            <!-- Electrical Measurements -->
+            <div class="gauges-section">
+                <!-- Voltages -->
                 <div class="card">
-                    <div class="dashboard-placeholder">
-                        <div class="icon">⚙️</div>
-                        <h2>Sensor Calibration</h2>
-                        <p>Sensor calibration tools for adjusting offset and gain parameters will be implemented soon. This will ensure accurate sensor readings.</p>
+                    <h3 class="card-title">Phase Voltages</h3>
+                    <div class="gauge-group">
+                        <div class="gauge-container">
+                            <div class="gauge-title">L1-N</div>
+                            <canvas id="gaugeV1" class="gauge"></canvas>
+                            <div class="gauge-value" id="v1_value">0 V</div>
+                        </div>
+                        <div class="gauge-container">
+                            <div class="gauge-title">L2-N</div>
+                            <canvas id="gaugeV2" class="gauge"></canvas>
+                            <div class="gauge-value" id="v2_value">0 V</div>
+                        </div>
+                        <div class="gauge-container">
+                            <div class="gauge-title">L3-N</div>
+                            <canvas id="gaugeV3" class="gauge"></canvas>
+                            <div class="gauge-value" id="v3_value">0 V</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Currents -->
+                <div class="card">
+                    <h3 class="card-title">Phase Currents</h3>
+                    <div class="gauge-group">
+                        <div class="gauge-container">
+                            <div class="gauge-title">L1</div>
+                            <canvas id="gaugeA1" class="gauge"></canvas>
+                            <div class="gauge-value" id="a1_value">0 A</div>
+                        </div>
+                        <div class="gauge-container">
+                            <div class="gauge-title">L2</div>
+                            <canvas id="gaugeA2" class="gauge"></canvas>
+                            <div class="gauge-value" id="a2_value">0 A</div>
+                        </div>
+                        <div class="gauge-container">
+                            <div class="gauge-title">L3</div>
+                            <canvas id="gaugeA3" class="gauge"></canvas>
+                            <div class="gauge-value" id="a3_value">0 A</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Power -->
+                <div class="card">
+                    <h3 class="card-title">Phase Power</h3>
+                    <div class="gauge-group">
+                        <div class="gauge-container">
+                            <div class="gauge-title">L1</div>
+                            <canvas id="gaugeW1" class="gauge"></canvas>
+                            <div class="gauge-value" id="w1_value">0 W</div>
+                        </div>
+                        <div class="gauge-container">
+                            <div class="gauge-title">L2</div>
+                            <canvas id="gaugeW2" class="gauge"></canvas>
+                            <div class="gauge-value" id="w2_value">0 W</div>
+                        </div>
+                        <div class="gauge-container">
+                            <div class="gauge-title">L3</div>
+                            <canvas id="gaugeW3" class="gauge"></canvas>
+                            <div class="gauge-value" id="w3_value">0 W</div>
+                        </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="page" id="logs">
-                <div class="card">
-                    <div class="dashboard-placeholder">
-                        <div class="icon">📋</div>
-                        <h2>Logs & Advanced Settings</h2>
-                        <p>System logs, debugging information, and advanced configuration options will be available in future updates.</p>
+        <!-- Wi-Fi Settings Page -->
+        <div id="wifi" class="page">
+            <div class="page-header">
+                <h1>📶 Wi-Fi Configuration</h1>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">Available Networks</h3>
+                <button class="btn btn-primary" onclick="scanNetworks()">
+                    🔍 Scan Networks
+                </button>
+                <div id="scanStatus" style="margin-top: 15px;"></div>
+                <div id="networkList" class="network-list" style="margin-top: 15px; display: none;"></div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">Wi-Fi Settings</h3>
+                <form id="wifiForm">
+                    <div class="form-group">
+                        <label class="form-label">Network SSID</label>
+                        <input type="text" class="form-input" id="wifi_ssid" placeholder="Enter Wi-Fi network name">
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" id="wifi_password" placeholder="Enter password">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Connection Mode</label>
+                        <select class="form-select" id="wifi_station_flag">
+                            <option value="0">Access Point Mode</option>
+                            <option value="1">Station Mode (Connect to Router)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        💾 Save Wi-Fi Settings
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- MQTT Settings Page -->
+        <div id="mqtt" class="page">
+            <div class="page-header">
+                <h1>📡 MQTT Configuration</h1>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">MQTT Broker Settings</h3>
+                <form id="mqttForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Broker Address</label>
+                            <input type="text" class="form-input" id="mqtt_broker" placeholder="mqtt.example.com" maxlength="30">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Port</label>
+                            <input type="number" class="form-input" id="mqtt_port" placeholder="1883" min="0" max="65535">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Username</label>
+                            <input type="text" class="form-input" id="mqtt_user_name" placeholder="Username" maxlength="14">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-input" id="mqtt_password" placeholder="Password" maxlength="14">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Device Token</label>
+                            <input type="text" class="form-input" id="mqtt_token" placeholder="Device token" maxlength="14">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Update Interval (seconds)</label>
+                            <input type="number" class="form-input" id="interval" placeholder="60" min="0" max="65535">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        💾 Save MQTT Settings
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Firmware Update Page -->
+        <div id="firmware" class="page">
+            <div class="page-header">
+                <h1>🔄 Firmware Update</h1>
+            </div>
+            <div class="card">
+                <h3 class="card-title">OTA Update</h3>
+                <div class="alert alert-warning">
+                    ⚠️ This feature will be available in a future update
                 </div>
+                <p>Over-the-air firmware updates will allow you to upgrade your ESP32 device remotely.</p>
+            </div>
+        </div>
+
+        <!-- Calibration Page -->
+        <div id="calibration" class="page">
+            <div class="page-header">
+                <h1>🔧 Sensor Calibration</h1>
+            </div>
+            <div class="card">
+                <h3 class="card-title">Calibration Settings</h3>
+                <div class="alert alert-warning">
+                    ⚠️ This feature will be available in a future update
+                </div>
+                <p>Sensor calibration tools will allow fine-tuning of measurement accuracy.</p>
             </div>
         </div>
     </main>
 
     <script>
-        // Application State
-        let scanInterval = null;
-        let selectedNetwork = null;
-        let isMobile = window.innerWidth <= 768;
+        // Global variables
+        let pollingInterval;
+        let scanInterval;
+        let currentMode = -1;
+        let gauges = {};
 
-        // Initialize Application
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeNavigation();
-            initializeMobileMenu();
-            loadCurrentSettings();
-            
-            // Update mobile state on resize
-            window.addEventListener('resize', function() {
-                isMobile = window.innerWidth <= 768;
-                if (!isMobile) {
-                    document.getElementById('sidebar').classList.remove('open');
-                    document.getElementById('overlay').classList.remove('active');
-                }
-            });
-        });
+        // Initialize on page load
+        window.onload = function() {
+            initializeDashboard();
+            loadWiFiSettings();
+            loadMQTTSettings();
+            initializeGauges();
+        };
 
-        // Navigation Functions
-        function initializeNavigation() {
-            const navItems = document.querySelectorAll('.nav-item[data-page]');
-            
-            navItems.forEach(item => {
-                item.addEventListener('click', function() {
-                    const page = this.dataset.page;
-                    
-                    // Skip disabled items
-                    if (this.style.opacity === '0.5') {
-                        return;
-                    }
-                    
-                    switchPage(page);
-                    
-                    // Close mobile menu
-                    if (isMobile) {
-                        document.getElementById('sidebar').classList.remove('open');
-                        document.getElementById('overlay').classList.remove('active');
-                    }
-                });
-            });
+        // Sidebar toggle for mobile
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('active');
         }
 
-        function switchPage(pageId) {
-            // Update navigation
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            document.querySelector(`[data-page="${pageId}"]`).classList.add('active');
+        // Page navigation
+        function showPage(pageId) {
+            // Hide all pages
+            const pages = document.querySelectorAll('.page');
+            pages.forEach(page => page.classList.remove('active'));
             
-            // Update pages
-            document.querySelectorAll('.page').forEach(page => {
-                page.classList.remove('active');
-            });
+            // Show selected page
             document.getElementById(pageId).classList.add('active');
             
-            // Update page title
-            const titles = {
-                dashboard: 'Dashboard',
-                wifi: 'Wi-Fi Settings',
-                mqtt: 'MQTT Settings',
-                ota: 'Firmware OTA',
-                calibration: 'Calibration',
-                logs: 'Logs & Advanced'
-            };
-            document.getElementById('pageTitle').textContent = titles[pageId];
+            // Update nav links
+            const navLinks = document.querySelectorAll('.nav-link');
+            navLinks.forEach(link => link.classList.remove('active'));
+            event.target.classList.add('active');
             
-            // Load page-specific data
-            if (pageId === 'wifi') {
-                loadWifiSettings();
-            } else if (pageId === 'mqtt') {
-                loadMqttSettings();
+            // Close sidebar on mobile after selection
+            if (window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.remove('active');
             }
-        }
-
-        function initializeMobileMenu() {
-            const menuToggle = document.getElementById('menuToggle');
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('overlay');
             
-            menuToggle.addEventListener('click', function() {
-                if (isMobile) {
-                    sidebar.classList.toggle('open');
-                    overlay.classList.toggle('active');
-                } else {
-                    sidebar.classList.toggle('collapsed');
-                    document.getElementById('mainContent').classList.toggle('expanded');
-                }
-            });
-            
-            overlay.addEventListener('click', function() {
-                sidebar.classList.remove('open');
-                overlay.classList.remove('active');
-            });
-        }
-
-        // Settings Loading Functions
-        async function loadCurrentSettings() {
-            await Promise.all([
-                loadWifiSettings(),
-                loadMqttSettings()
-            ]);
-        }
-
-        async function loadWifiSettings() {
-            try {
-                const response = await fetch('/wifi_settings.json');
-                if (response.ok) {
-                    const settings = await response.json();
-                    
-                    // Update current settings display
-                    document.getElementById('currentSSID').textContent = settings.wifi_ssid || 'Not configured';
-                    document.getElementById('currentMode').textContent = 
-                        settings.wifi_station_flag === 1 ? 'Station Mode' : 'Access Point Mode';
-                    document.getElementById('connectionStatus').textContent = 
-                        settings.wifi_station_flag === 1 ? 'Connected to Wi-Fi' : 'Hosting Access Point';
-                    
-                    document.getElementById('currentWifiCard').style.display = 'block';
-                    
-                    // Update status indicator
-                    updateDeviceStatus(settings.wifi_station_flag === 1);
-                }
-            } catch (error) {
-                console.error('Failed to load Wi-Fi settings:', error);
-            }
-        }
-
-        async function loadMqttSettings() {
-            try {
-                const response = await fetch('/mqtt_settings.json');
-                if (response.ok) {
-                    const settings = await response.json();
-                    
-                    // Update current settings display
-                    document.getElementById('currentBroker').textContent = settings.mqtt_broker || 'Not configured';
-                    document.getElementById('currentPort').textContent = settings.mqtt_port || '-';
-                    document.getElementById('currentUser').textContent = settings.mqtt_user || 'Not set';
-                    document.getElementById('currentInterval').textContent = settings.interval || '-';
-                    
-                    document.getElementById('currentMqttCard').style.display = 'block';
-                }
-            } catch (error) {
-                console.error('Failed to load MQTT settings:', error);
-            }
-        }
-
-        function updateDeviceStatus(isConnected) {
-            const statusDot = document.getElementById('statusDot');
-            const statusText = document.getElementById('statusText');
-            
-            if (isConnected) {
-                statusDot.className = 'status-dot online';
-                statusText.textContent = 'Station Mode - 192.168.1.155';
+            // Handle page-specific initialization
+            if (pageId === 'dashboard') {
+                initializeDashboard();
             } else {
-                statusDot.className = 'status-dot online';
-                statusText.textContent = 'AP Mode - 192.168.4.1';
+                // Stop polling when not on dashboard
+                if (pollingInterval) {
+                    clearInterval(pollingInterval);
+                }
             }
         }
 
-        // Wi-Fi Network Scanning
-        async function startNetworkScan() {
-            const scanBtn = document.getElementById('scanBtn');
-            const scanBtnText = document.getElementById('scanBtnText');
-            const networksContainer = document.getElementById('networksContainer');
+        // Dashboard Functions
+        function initializeDashboard() {
+            getCurrentMode();
+            startDataPolling();
+        }
+
+        function startDataPolling() {
+            // Clear existing interval if any
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+            }
             
-            // Disable button and show loading state
-            scanBtn.disabled = true;
-            scanBtnText.innerHTML = '<span class="loading"></span>Scanning...';
-            networksContainer.innerHTML = '';
+            // Initial fetch
+            fetchModbusData();
             
+            // Poll every 2 seconds
+            pollingInterval = setInterval(fetchModbusData, 2000);
+        }
+
+        async function fetchModbusData() {
             try {
-                // First call to initiate scan
+                const response = await fetch('/test_modbus');
+                const data = await response.json();
+                
+                if (data.status === 0) {
+                    // Modbus not working
+                    document.getElementById('statusAlert').style.display = 'flex';
+                    clearDashboardData();
+                } else if (data.status === 1) {
+                    // Modbus working - update data
+                    document.getElementById('statusAlert').style.display = 'none';
+                    updateDashboardData(data);
+                }
+            } catch (error) {
+                console.error('Error fetching Modbus data:', error);
+                document.getElementById('statusAlert').style.display = 'flex';
+            }
+        }
+
+        function updateDashboardData(data) {
+            // Update KPIs
+            document.getElementById('rpm').textContent = data.rpm || 0;
+            document.getElementById('oil_p').textContent = data.oil_p || 0;
+            document.getElementById('oil_t').textContent = data.oil_t || 0;
+            document.getElementById('cool_t').textContent = data.cool_t || 0;
+            document.getElementById('fuel_l').textContent = data.fuel_l || 0;
+            document.getElementById('bat_v').textContent = (data.bat_v || 0).toFixed(2);
+            document.getElementById('cgh_v').textContent = (data.cgh_v || 0).toFixed(2);
+            document.getElementById('freq').textContent = (data.f || 0).toFixed(2);
+            
+            // Update voltage gauges and values
+            if (data.v && data.v.length >= 3) {
+                updateGauge('gaugeV1', data.v[0], 500);
+                document.getElementById('v1_value').textContent = data.v[0].toFixed(1) + ' V';
+                
+                updateGauge('gaugeV2', data.v[1], 500);
+                document.getElementById('v2_value').textContent = data.v[1].toFixed(1) + ' V';
+                
+                updateGauge('gaugeV3', data.v[2], 500);
+                document.getElementById('v3_value').textContent = data.v[2].toFixed(1) + ' V';
+            }
+            
+            // Update current gauges and values
+            if (data.a && data.a.length >= 3) {
+                updateGauge('gaugeA1', data.a[0], 200);
+                document.getElementById('a1_value').textContent = data.a[0].toFixed(1) + ' A';
+                
+                updateGauge('gaugeA2', data.a[1], 200);
+                document.getElementById('a2_value').textContent = data.a[1].toFixed(1) + ' A';
+                
+                updateGauge('gaugeA3', data.a[2], 200);
+                document.getElementById('a3_value').textContent = data.a[2].toFixed(1) + ' A';
+            }
+            
+            // Update power gauges and values
+            if (data.w && data.w.length >= 3) {
+                updateGauge('gaugeW1', data.w[0], 50000);
+                document.getElementById('w1_value').textContent = formatPower(data.w[0]);
+                
+                updateGauge('gaugeW2', data.w[1], 50000);
+                document.getElementById('w2_value').textContent = formatPower(data.w[1]);
+                
+                updateGauge('gaugeW3', data.w[2], 50000);
+                document.getElementById('w3_value').textContent = formatPower(data.w[2]);
+            }
+        }
+
+        function formatPower(watts) {
+            if (Math.abs(watts) >= 1000) {
+                return (watts / 1000).toFixed(1) + ' kW';
+            }
+            return watts.toFixed(0) + ' W';
+        }
+
+        function clearDashboardData() {
+            // Clear all KPI values
+            const kpiIds = ['rpm', 'oil_p', 'oil_t', 'cool_t', 'fuel_l', 'bat_v', 'cgh_v', 'freq'];
+            kpiIds.forEach(id => {
+                document.getElementById(id).textContent = '0';
+            });
+            
+            // Clear gauge values
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById(`v${i}_value`).textContent = '0 V';
+                document.getElementById(`a${i}_value`).textContent = '0 A';
+                document.getElementById(`w${i}_value`).textContent = '0 W';
+                
+                updateGauge(`gaugeV${i}`, 0, 500);
+                updateGauge(`gaugeA${i}`, 0, 200);
+                updateGauge(`gaugeW${i}`, 0, 50000);
+            }
+        }
+
+        // Generator Mode Functions
+        async function getCurrentMode() {
+            try {
+                const response = await fetch('/get_mode');
+                const data = await response.json();
+                currentMode = data.mode;
+                updateModeButtons(currentMode);
+            } catch (error) {
+                console.error('Error getting generator mode:', error);
+            }
+        }
+
+        async function setGeneratorMode(mode) {
+            try {
+                const response = await fetch(`/command?mode=${mode}`);
+                const result = await response.text();
+                
+                if (result === 'ok') {
+                    showNotification('Mode change command sent', 'success');
+                    // Wait 3 seconds then check the mode
+                    setTimeout(getCurrentMode, 3000);
+                } else {
+                    showNotification('Failed to change mode', 'error');
+                }
+            } catch (error) {
+                console.error('Error setting generator mode:', error);
+                showNotification('Error sending command', 'error');
+            }
+        }
+
+        function updateModeButtons(mode) {
+            const buttons = document.querySelectorAll('.control-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            if (mode === 0) {
+                document.querySelector('.control-btn.stop').classList.add('active');
+            } else if (mode === 1) {
+                document.querySelector('.control-btn.auto').classList.add('active');
+            } else if (mode === 2) {
+                document.querySelector('.control-btn.manual').classList.add('active');
+            }
+        }
+
+        // Wi-Fi Functions
+        async function scanNetworks() {
+            const statusDiv = document.getElementById('scanStatus');
+            const listDiv = document.getElementById('networkList');
+            
+            statusDiv.innerHTML = '<div class="spinner"></div><p>Scanning for networks...</p>';
+            listDiv.style.display = 'none';
+            
+            // Start scanning
+            try {
                 await fetch('/scanNetwork');
                 
-                // Poll for results every 2 seconds
+                // Poll for results
                 scanInterval = setInterval(async () => {
                     try {
                         const response = await fetch('/scanNetwork');
                         const data = await response.json();
                         
                         if (data.status === 1) {
-                            // Scan completed
                             clearInterval(scanInterval);
                             displayNetworks(data.networks);
-                            resetScanButton();
+                            statusDiv.innerHTML = '';
                         } else if (data.status === -1) {
-                            // Scan error
                             clearInterval(scanInterval);
-                            showAlert('Failed to scan networks. Please try again.', 'error', 'wifiAlerts');
-                            resetScanButton();
+                            statusDiv.innerHTML = '<p style="color: red;">Error scanning networks</p>';
                         }
-                        // If status is 0, continue polling
                     } catch (error) {
                         clearInterval(scanInterval);
-                        showAlert('Network scan failed: ' + error.message, 'error', 'wifiAlerts');
-                        resetScanButton();
+                        statusDiv.innerHTML = '<p style="color: red;">Error: ' + error.message + '</p>';
                     }
                 }, 2000);
-                
             } catch (error) {
-                showAlert('Failed to start network scan: ' + error.message, 'error', 'wifiAlerts');
-                resetScanButton();
+                statusDiv.innerHTML = '<p style="color: red;">Failed to start scan</p>';
             }
-        }
-
-        function resetScanButton() {
-            const scanBtn = document.getElementById('scanBtn');
-            const scanBtnText = document.getElementById('scanBtnText');
-            
-            scanBtn.disabled = false;
-            scanBtnText.innerHTML = '🔍 Scan Networks';
         }
 
         function displayNetworks(networks) {
-            const container = document.getElementById('networksContainer');
+            const listDiv = document.getElementById('networkList');
             
             if (networks.length === 0) {
-                container.innerHTML = '<div class="alert alert-info">No networks found. Try scanning again.</div>';
-                return;
+                listDiv.innerHTML = '<p>No networks found</p>';
+            } else {
+                let html = '';
+                networks.forEach(network => {
+                    const ssid = network[0];
+                    const rssi = network[1];
+                    const signalStrength = getSignalStrength(rssi);
+                    
+                    html += `
+                        <div class="network-item" onclick="selectNetwork('${ssid}')">
+                            <span class="network-ssid">${ssid}</span>
+                            <span class="network-signal">
+                                ${signalStrength} ${rssi} dBm
+                            </span>
+                        </div>
+                    `;
+                });
+                listDiv.innerHTML = html;
             }
             
-            container.innerHTML = networks.map((network, index) => {
-                const [ssid, rssi, encryption] = network;
-                const signalBars = getSignalBars(rssi);
-                const lockIcon = encryption === 1 ? '🔒' : '🔓';
-                const signalIcon = getSignalIcon(rssi);
-                
-                return `
-                    <div class="network-item" onclick="selectNetwork('${ssid}', ${encryption})" data-ssid="${ssid}">
-                        <div class="network-info">
-                            <span class="network-icon">${lockIcon}</span>
-                            <span class="network-name">${ssid}</span>
-                        </div>
-                        <div class="signal-info">
-                            ${rssi} dBm
-                            <span class="signal-strength">${signalIcon}</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+            listDiv.style.display = 'block';
         }
 
-        function getSignalIcon(rssi) {
-            if (rssi >= -50) return '📶';
-            if (rssi >= -60) return '📶';
-            if (rssi >= -70) return '📶';
-            if (rssi >= -80) return '📶';
+        function getSignalStrength(rssi) {
+            if (rssi > -50) return '📶';
+            if (rssi > -70) return '📶';
+            if (rssi > -85) return '📶';
             return '📶';
         }
 
-        function getSignalBars(rssi) {
-            if (rssi >= -50) return 4;
-            if (rssi >= -60) return 3;
-            if (rssi >= -70) return 2;
-            if (rssi >= -80) return 1;
-            return 0;
+        function selectNetwork(ssid) {
+            document.getElementById('wifi_ssid').value = ssid;
+            
+            // Highlight selected network
+            const items = document.querySelectorAll('.network-item');
+            items.forEach(item => item.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
         }
 
-        function selectNetwork(ssid, encryption) {
-            // Remove previous selection
-            document.querySelectorAll('.network-item').forEach(item => {
-                item.classList.remove('selected');
+        async function loadWiFiSettings() {
+            try {
+                const response = await fetch('/wifi_settings.json');
+                const data = await response.json();
+                
+                document.getElementById('wifi_ssid').value = data.wifi_ssid || '';
+                document.getElementById('wifi_password').value = data.wifi_password || '';
+                document.getElementById('wifi_station_flag').value = data.wifi_station_flag || '0';
+            } catch (error) {
+                console.log('Could not load Wi-Fi settings');
+            }
+        }
+
+        // MQTT Functions
+        async function loadMQTTSettings() {
+            try {
+                const response = await fetch('/mqtt_settings.json');
+                const data = await response.json();
+                
+                document.getElementById('mqtt_broker').value = data.mqtt_broker || '';
+                document.getElementById('mqtt_port').value = data.mqtt_port || '1883';
+                document.getElementById('mqtt_user_name').value = data.mqtt_user || '';
+                document.getElementById('mqtt_password').value = data.mqtt_password || '';
+                document.getElementById('mqtt_token').value = data.mqtt_token || '';
+                document.getElementById('interval').value = data.interval || '60';
+            } catch (error) {
+                console.log('Could not load MQTT settings');
+            }
+        }
+
+        // Form Submissions
+        document.getElementById('wifiForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const ssid = document.getElementById('wifi_ssid').value;
+            const password = document.getElementById('wifi_password').value;
+            const stationFlag = document.getElementById('wifi_station_flag').value;
+            
+            const url = `/settings?wifi_ssid=${encodeURIComponent(ssid)}&wifi_password=${encodeURIComponent(password)}&wifi_station_flag=${stationFlag}`;
+            
+            try {
+                const response = await fetch(url);
+                const result = await response.text();
+                
+                if (result === 'ok') {
+                    showNotification('Wi-Fi settings saved successfully!', 'success');
+                } else {
+                    showNotification('Error saving Wi-Fi settings', 'error');
+                }
+            } catch (error) {
+                showNotification('Failed to save settings', 'error');
+            }
+        });
+
+        document.getElementById('mqttForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const params = {
+                mqtt_broker: document.getElementById('mqtt_broker').value,
+                mqtt_port: document.getElementById('mqtt_port').value,
+                mqtt_user_name: document.getElementById('mqtt_user_name').value,
+                mqtt_password: document.getElementById('mqtt_password').value,
+                mqtt_token: document.getElementById('mqtt_token').value,
+                interval: document.getElementById('interval').value
+            };
+            
+            // Validation
+            if (params.mqtt_broker.length > 30) {
+                showNotification('Broker address must be 30 characters or less', 'error');
+                return;
+            }
+            if (params.mqtt_user_name.length > 14 || params.mqtt_password.length > 14 || params.mqtt_token.length > 14) {
+                showNotification('Username, password, and token must be 14 characters or less', 'error');
+                return;
+            }
+            
+            const queryString = Object.entries(params)
+                .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+                .join('&');
+            
+            try {
+                const response = await fetch(`/settings?${queryString}`);
+                const result = await response.text();
+                
+                if (response.ok) {
+                    showNotification('MQTT settings saved successfully!', 'success');
+                } else {
+                    showNotification('Error saving MQTT settings', 'error');
+                }
+            } catch (error) {
+                showNotification('Failed to save settings', 'error');
+            }
+        });
+
+        // Notification function
+        function showNotification(message, type) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type}`;
+            notification.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; animation: slideIn 0.3s ease;';
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'fadeOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Gauge initialization and update functions
+        function initializeGauges() {
+            const canvases = document.querySelectorAll('canvas.gauge');
+            canvases.forEach(canvas => {
+                const ctx = canvas.getContext('2d');
+                canvas.width = 150;
+                canvas.height = 150;
+                drawGauge(ctx, 0, 100);
             });
-            
-            // Select current network
-            const networkItem = document.querySelector(`[data-ssid="${ssid}"]`);
-            if (networkItem) {
-                networkItem.classList.add('selected');
-            }
-            
-            // Fill the form
-            document.getElementById('wifiSsid').value = ssid;
-            selectedNetwork = { ssid, encryption };
-            
-            showAlert(`Selected network: ${ssid}`, 'info', 'wifiAlerts');
         }
 
-        // Wi-Fi Form Submission
-        document.getElementById('wifiForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
+        function drawGauge(ctx, value, maxValue) {
+            const centerX = 75;
+            const centerY = 75;
+            const radius = 60;
             
-            const ssid = document.getElementById('wifiSsid').value.trim();
-            const password = document.getElementById('wifiPassword').value;
-            const mode = document.getElementById('wifiMode').value;
+            // Clear canvas
+            ctx.clearRect(0, 0, 150, 150);
             
-            if (!ssid) {
-                showAlert('Please enter a network name (SSID)', 'error', 'wifiAlerts');
-                return;
-            }
+            // Draw background arc
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0.75 * Math.PI, 2.25 * Math.PI);
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 10;
+            ctx.stroke();
             
-            const saveBtn = document.getElementById('saveWifiBtn');
-            const saveBtnText = document.getElementById('saveWifiBtnText');
+            // Draw value arc
+            const percentage = Math.min(value / maxValue, 1);
+            const angle = 0.75 * Math.PI + (1.5 * Math.PI * percentage);
             
-            // Show loading state
-            saveBtn.disabled = true;
-            saveBtnText.innerHTML = '<span class="loading"></span>Saving...';
-            
-            try {
-                const params = new URLSearchParams({
-                    wifi_ssid: ssid,
-                    wifi_password: password,
-                    wifi_station_flag: mode
-                });
-                
-                const response = await fetch(`/settings?${params.toString()}`);
-                
-                if (response.ok) {
-                    const result = await response.text();
-                    if (result.trim() === 'ok') {
-                        showAlert('Wi-Fi settings saved successfully! The device will restart shortly.', 'success', 'wifiAlerts');
-                        setTimeout(() => {
-                            loadWifiSettings();
-                        }, 3000);
-                    } else {
-                        showAlert('Failed to save settings. Please try again.', 'error', 'wifiAlerts');
-                    }
-                } else {
-                    showAlert('Failed to save settings. Server returned an error.', 'error', 'wifiAlerts');
-                }
-            } catch (error) {
-                showAlert('Failed to save settings: ' + error.message, 'error', 'wifiAlerts');
-            } finally {
-                // Reset button state
-                saveBtn.disabled = false;
-                saveBtnText.innerHTML = '💾 Save Configuration';
-            }
-        });
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0.75 * Math.PI, angle);
+            ctx.strokeStyle = getGaugeColor(percentage);
+            ctx.lineWidth = 10;
+            ctx.stroke();
+        }
 
-        // MQTT Form Submission
-        document.getElementById('mqttForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            // Get form values
-            const broker = document.getElementById('mqttBroker').value.trim();
-            const port = parseInt(document.getElementById('mqttPort').value);
-            const user = document.getElementById('mqttUser').value.trim();
-            const password = document.getElementById('mqttPassword').value.trim();
-            const token = document.getElementById('mqttToken').value.trim();
-            const interval = parseInt(document.getElementById('mqttInterval').value);
-            
-            // Validate required fields
-            if (!broker) {
-                showAlert('MQTT Broker is required', 'error', 'mqttAlerts');
-                return;
-            }
-            
-            if (!port || port < 0 || port > 65535) {
-                showAlert('Port must be between 0 and 65535', 'error', 'mqttAlerts');
-                return;
-            }
-            
-            if (!interval || interval < 0 || interval > 65535) {
-                showAlert('Interval must be between 0 and 65535 seconds', 'error', 'mqttAlerts');
-                return;
-            }
-            
-            // Validate string lengths
-            if (broker.length > 30) {
-                showAlert('MQTT Broker must be 30 characters or less', 'error', 'mqttAlerts');
-                return;
-            }
-            
-            if (user.length > 14) {
-                showAlert('Username must be 14 characters or less', 'error', 'mqttAlerts');
-                return;
-            }
-            
-            if (password.length > 14) {
-                showAlert('Password must be 14 characters or less', 'error', 'mqttAlerts');
-                return;
-            }
-            
-            if (token.length > 14) {
-                showAlert('Device Token must be 14 characters or less', 'error', 'mqttAlerts');
-                return;
-            }
-            
-            const saveBtn = document.getElementById('saveMqttBtn');
-            const saveBtnText = document.getElementById('saveMqttBtnText');
-            
-            // Show loading state
-            saveBtn.disabled = true;
-            saveBtnText.innerHTML = '<span class="loading"></span>Saving...';
-            
-            try {
-                const params = new URLSearchParams({
-                    mqtt_broker: broker,
-                    mqtt_port: port,
-                    mqtt_user_name: user,
-                    mqtt_password: password,
-                    mqtt_token: token,
-                    interval: interval
-                });
-                
-                const response = await fetch(`/settings?${params.toString()}`);
-                
-                if (response.ok) {
-                    const result = await response.text();
-                    if (result.includes('Settings updated') || result.trim() === 'ok') {
-                        showAlert('MQTT settings saved successfully!', 'success', 'mqttAlerts');
-                        setTimeout(() => {
-                            loadMqttSettings();
-                        }, 2000);
-                    } else {
-                        showAlert('Failed to save MQTT settings. Please check your input.', 'error', 'mqttAlerts');
-                    }
-                } else {
-                    showAlert('Failed to save MQTT settings. Server validation failed.', 'error', 'mqttAlerts');
-                }
-            } catch (error) {
-                showAlert('Failed to save MQTT settings: ' + error.message, 'error', 'mqttAlerts');
-            } finally {
-                // Reset button state
-                saveBtn.disabled = false;
-                saveBtnText.innerHTML = '💾 Save MQTT Configuration';
-            }
-        });
+        function getGaugeColor(percentage) {
+            if (percentage < 0.5) return '#27ae60';
+            if (percentage < 0.8) return '#f39c12';
+            return '#e74c3c';
+        }
 
-        // Utility Functions
-        function showAlert(message, type, containerId) {
-            const container = document.getElementById(containerId);
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type}`;
-            alertDiv.textContent = message;
-            
-            // Remove existing alerts of the same type
-            const existingAlerts = container.querySelectorAll(`.alert-${type}`);
-            existingAlerts.forEach(alert => alert.remove());
-            
-            container.appendChild(alertDiv);
-            
-            // Auto-remove after 5 seconds for non-error messages
-            if (type !== 'error') {
-                setTimeout(() => {
-                    if (alertDiv.parentNode) {
-                        alertDiv.parentNode.removeChild(alertDiv);
-                    }
-                }, 5000);
+        function updateGauge(canvasId, value, maxValue) {
+            const canvas = document.getElementById(canvasId);
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                drawGauge(ctx, value, maxValue);
             }
         }
 
-        // Clean up intervals when page unloads
-        window.addEventListener('beforeunload', function() {
-            if (scanInterval) {
-                clearInterval(scanInterval);
+        // Add slide animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
             }
-        });
-
-        // Form input validation helpers
-        document.getElementById('mqttBroker').addEventListener('input', function() {
-            const remaining = 30 - this.value.length;
-            const helpText = this.parentNode.querySelector('.form-text');
-            helpText.textContent = `Maximum 30 characters (${remaining} remaining)`;
-            helpText.style.color = remaining < 5 ? '#e74c3c' : '#666';
-        });
-
-        document.getElementById('mqttUser').addEventListener('input', function() {
-            const remaining = 14 - this.value.length;
-            const helpText = this.parentNode.querySelector('.form-text');
-            helpText.textContent = `Maximum 14 characters (${remaining} remaining)`;
-            helpText.style.color = remaining < 2 ? '#e74c3c' : '#666';
-        });
-
-        document.getElementById('mqttPassword').addEventListener('input', function() {
-            const remaining = 14 - this.value.length;
-            const helpText = this.parentNode.querySelector('.form-text');
-            helpText.textContent = `Maximum 14 characters (${remaining} remaining)`;
-            helpText.style.color = remaining < 2 ? '#e74c3c' : '#666';
-        });
-
-        document.getElementById('mqttToken').addEventListener('input', function() {
-            const remaining = 14 - this.value.length;
-            const helpText = this.parentNode.querySelector('.form-text');
-            helpText.textContent = `Maximum 14 characters (${remaining} remaining)`;
-            helpText.style.color = remaining < 2 ? '#e74c3c' : '#666';
-        });
-
-        // Port and interval validation
-        document.getElementById('mqttPort').addEventListener('input', function() {
-            const value = parseInt(this.value);
-            const helpText = this.parentNode.querySelector('.form-text');
-            if (value < 0 || value > 65535) {
-                helpText.textContent = '0-65535 (Invalid range!)';
-                helpText.style.color = '#e74c3c';
-            } else {
-                helpText.textContent = '0-65535';
-                helpText.style.color = '#666';
+            @keyframes fadeOut {
+                from { opacity: 1; }
+                to { opacity: 0; }
             }
-        });
-
-        document.getElementById('mqttInterval').addEventListener('input', function() {
-            const value = parseInt(this.value);
-            const helpText = this.parentNode.querySelector('.form-text');
-            if (value < 0 || value > 65535) {
-                helpText.textContent = '0-65535 seconds (Invalid range!)';
-                helpText.style.color = '#e74c3c';
-            } else {
-                helpText.textContent = '0-65535 seconds';
-                helpText.style.color = '#666';
-            }
-        });
-
-        // Auto-refresh settings periodically
-        setInterval(async () => {
-            const currentPage = document.querySelector('.page.active').id;
-            if (currentPage === 'wifi') {
-                await loadWifiSettings();
-            } else if (currentPage === 'mqtt') {
-                await loadMqttSettings();
-            }
-        }, 30000); // Refresh every 30 seconds
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
