@@ -2,9 +2,9 @@
 #include <Arduino.h>
 #include "main.h"
 #include "dse_modbus.h"
+#include "comap.h"
 
 
-#define SLAVE_ID 1
 
 ModbusRTU dse_rtu;
 uint16_t registers[70];
@@ -143,76 +143,79 @@ void dse_task(void* parameter)
       //     dse_state = write_command;
       //   }
       // }
-      
+      #ifdef DSE
       //if(dse_state == write_command && dse_request_started == 0 && !dse_rtu.slave()) 
-      if(start_write && dse_request_started == 0 && !dse_rtu.slave()) 
-      {
-        start_write = false;
-        // Serial.println("write flag on");
-        if((strcmp(command_name,"Stop mode") == 0) && command_value == 1) {
-          write_registers[0] = 35700;
-          write_registers[1] = ones_complement(write_registers[0]);
-          last_dse_state = dse_state;
-          dse_state = write_command;
-        }
-        else if((strcmp(command_name,"Auto mode") == 0) && command_value == 1) {
-          write_registers[0] = 35701;
-          write_registers[1] = ones_complement(write_registers[0]);
-          last_dse_state = dse_state;
-          dse_state = write_command;
-        }
-        else if((strcmp(command_name,"Manual mode") == 0) && command_value == 1) {
-          write_registers[0] = 35702;
-          write_registers[1] = ones_complement(write_registers[0]);
-          last_dse_state = dse_state;
-          dse_state = write_command;
-        }
-        if(dse_state == write_command)
+        if(start_write && dse_request_started == 0 && !dse_rtu.slave()) 
         {
-          dse_request_started = 1;
-          // DEBUG_PRINTLN("Write state");
-          // DEBUG_PRINTLN(command_name);
-          // DEBUG_PRINTLN(command_value);
-          dse_rtu.writeHreg(SLAVE_ID,4104,write_registers,2,dse_cb);
-        }
-      }
-      else{
-        if(millis() - dse_scan_timer >= dse_scan_interval )
-        {
-          switch (dse_state)
+          start_write = false;
+          // Serial.println("write flag on");
+          if((strcmp(command_name,"Stop mode") == 0) && command_value == 1) {
+            write_registers[0] = 35700;
+            write_registers[1] = ones_complement(write_registers[0]);
+            last_dse_state = dse_state;
+            dse_state = write_command;
+          }
+          else if((strcmp(command_name,"Auto mode") == 0) && command_value == 1) {
+            write_registers[0] = 35701;
+            write_registers[1] = ones_complement(write_registers[0]);
+            last_dse_state = dse_state;
+            dse_state = write_command;
+          }
+          else if((strcmp(command_name,"Manual mode") == 0) && command_value == 1) {
+            write_registers[0] = 35702;
+            write_registers[1] = ones_complement(write_registers[0]);
+            last_dse_state = dse_state;
+            dse_state = write_command;
+          }
+          if(dse_state == write_command)
           {
-          case read_general:
-            if(dse_request_started == 0 && !dse_rtu.slave()) 
-            {
-              dse_request_started = 1;
-              dse_rtu.readHreg(SLAVE_ID, 1024, registers,7, dse_cb);
-
-            }
-            break;
-          case read_mains:
-            if(dse_request_started == 0 && !dse_rtu.slave()) 
-            {
-              dse_request_started = 1;
-              dse_rtu.readHreg(SLAVE_ID, 1059, registers,31, dse_cb);
-
-            }
-            break;
-
-          case read_mode:
-            if(dse_request_started == 0 && !dse_rtu.slave()) 
-            {
-              dse_request_started = 1;
-              dse_rtu.readHreg(SLAVE_ID, 772, registers,1, dse_cb);
-
-            }
-            break;
-        
-          
-          default:
-            break;
+            dse_request_started = 1;
+            // DEBUG_PRINTLN("Write state");
+            // DEBUG_PRINTLN(command_name);
+            // DEBUG_PRINTLN(command_value);
+            dse_rtu.writeHreg(SLAVE_ID,4104,write_registers,2,dse_cb);
           }
         }
-      }
+        else{
+          if(millis() - dse_scan_timer >= dse_scan_interval )
+          {
+            switch (dse_state)
+            {
+            case read_general:
+              if(dse_request_started == 0 && !dse_rtu.slave()) 
+              {
+                dse_request_started = 1;
+                dse_rtu.readHreg(SLAVE_ID, 1024, registers,7, dse_cb);
+
+              }
+              break;
+            case read_mains:
+              if(dse_request_started == 0 && !dse_rtu.slave()) 
+              {
+                dse_request_started = 1;
+                dse_rtu.readHreg(SLAVE_ID, 1059, registers,31, dse_cb);
+
+              }
+              break;
+
+            case read_mode:
+              if(dse_request_started == 0 && !dse_rtu.slave()) 
+              {
+                dse_request_started = 1;
+                dse_rtu.readHreg(SLAVE_ID, 772, registers,1, dse_cb);
+
+              }
+              break;
+          
+            
+            default:
+              break;
+            }
+          }
+        }
+      #else
+        comap_read_modbus();
+      #endif
 
 
 

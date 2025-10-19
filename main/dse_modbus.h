@@ -2,6 +2,8 @@
 #define _DSE_H_
 
 #include <Arduino.h>
+
+#define SLAVE_ID 1
 struct dse_modbus_data
 {
     uint16_t oil_pressure;

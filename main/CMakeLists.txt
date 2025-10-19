@@ -5,6 +5,7 @@ set(srcs
   app_webserver_idf.cpp
   MQTT.cpp
   dse_modbus.cpp
+  comap.cpp
   )
 
 idf_component_register(SRCS ${srcs} 
