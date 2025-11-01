@@ -151,19 +151,19 @@ void dse_task(void* parameter)
         // Serial.println("write flag on");
         if((strcmp(command_name,"Stop mode") == 0) && command_value == 1) {
           write_registers[0] = 35700;
-          write_registers[1] = ones_complement(write_registers[0]);
+          write_registers[1] = 29835; //ones_complement(write_registers[0]);
           last_dse_state = dse_state;
           dse_state = write_command;
         }
         else if((strcmp(command_name,"Auto mode") == 0) && command_value == 1) {
           write_registers[0] = 35701;
-          write_registers[1] = ones_complement(write_registers[0]);
+          write_registers[1] = 29834; //ones_complement(write_registers[0]);
           last_dse_state = dse_state;
           dse_state = write_command;
         }
         else if((strcmp(command_name,"Manual mode") == 0) && command_value == 1) {
           write_registers[0] = 35702;
-          write_registers[1] = ones_complement(write_registers[0]);
+          write_registers[1] = 29833; //ones_complement(write_registers[0]);
           last_dse_state = dse_state;
           dse_state = write_command;
         }
